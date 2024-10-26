@@ -11,6 +11,7 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      debugShowCheckedModeBanner: false,
       title: 'Spring BottomSheet Demo',
       theme: ThemeData(
         primarySwatch: Colors.blue,
@@ -21,20 +22,26 @@ class MyApp extends StatelessWidget {
 }
 
 class MyHomePage extends StatelessWidget {
-  const MyHomePage({Key? key}) : super(key: key);
+  const MyHomePage({super.key});
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.black,
-      appBar: AppBar(
-        title: const Text('Spring BottomSheet Demo'),
-      ),
       body: Center(
         child: ElevatedButton(
           child: const Text('Show Spring BottomSheet'),
           onPressed: () {
-            showSpringBottomSheet(context);
+            showSpringBottomSheet(
+              context: context,
+              builder: (context) => const Center(
+                child: Text(
+                  'This is a custom child!',
+                  style: TextStyle(fontSize: 24),
+                ),
+              ),
+              isScrollControlled: true,
+            );
           },
         ),
       ),
