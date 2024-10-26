@@ -1,5 +1,8 @@
-<div align="center">  
- <h1 align="center" style="font-size: 70px;">Spring Bottom Sheet 🌟</h1>
+<div align="center" style="font-size: 36px; font-weight: bold;">
+    Spring Bottom Sheet 🌟
+</div>
+
+
 
 ### Hey Awesome Developer! ☕️
 
