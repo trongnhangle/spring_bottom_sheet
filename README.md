@@ -1,4 +1,5 @@
-# Spring Bottom Sheet 🌟
+<div align="center">  
+ <h1 align="center" style="font-size: 70px;">Spring Bottom Sheet 🌟</h1>
 
 ### Hey Awesome Developer! ☕️
 
@@ -12,9 +13,14 @@ If this package makes your bottom sheets bounce with joy and saves you hours of 
   <img src="https://media.giphy.com/media/3jVT4U5bilspG/giphy.gif" alt="Funny Coffee GIF" width="200">
 </p>
 
-**Support my caffeinated coding adventures:**
-- 🎯 [Buy Me a Coffee on Ko-fi](https://ko-fi.com/trongnhangle) 
-- 💖 [Feed My PayPal Coffee Fund](https://www.paypal.me/trongnhangle)
+<div align="center">
+  <h2>Support my caffeinated coding adventures:</h2>
+  <p style="font-size: 18px;">
+    🎯 Buy Me a Coffee on <a href="https://ko-fi.com/trongnhangle" style="font-size: 22px; font-weight: bold;">Ko-fi</a><br>
+    💖 Feed My <a href="https://www.paypal.me/trongnhangle" style="font-size: 22px; font-weight: bold;">PayPal</a> Coffee Fund
+  </p>
+</div>
+
 
 *Your support helps me stay awake to create more awesome Flutter packages!* 😄
 
