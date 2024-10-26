@@ -7,10 +7,9 @@ issue_tracker: https://github.com/trongnhangle/spring_bottom_sheet/issues
 topics:
   - animation
   - ui
-  - bottom_sheet
+  - bottom-sheet
   - modal
   - spring
-  - widget
 funding:
   - https://www.paypal.me/trongnhangle
 

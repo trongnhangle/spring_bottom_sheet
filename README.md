@@ -35,8 +35,6 @@ A lightweight Flutter package that provides a beautiful spring-animated bottom s
 [![likes](https://img.shields.io/pub/likes/spring_bottom_sheet)](https://pub.dev/packages/spring_bottom_sheet/score)
 [![popularity](https://img.shields.io/pub/popularity/spring_bottom_sheet)](https://pub.dev/packages/spring_bottom_sheet/score)
 
-[Rest of the README content remains the same...]
-
 ## Features
 
 - 🎯 Natural spring animation effect
