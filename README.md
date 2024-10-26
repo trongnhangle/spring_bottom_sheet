@@ -37,6 +37,10 @@ A lightweight Flutter package that provides a beautiful spring-animated bottom s
 - 🪄 Simple to implement
 - 🎉 Zero external dependencies
 
+## Demo
+![spring_bottom_sheet](https://github.com/user-attachments/assets/c8483be3-ae89-4bcb-90f6-392833ef535c)
+
+
 ## Installation
 
 Add this to your package's `pubspec.yaml` file:
