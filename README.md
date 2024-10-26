@@ -1,4 +1,4 @@
-<div align="center" style="font-size: 36px; font-weight: bold;">
+<div align="center" style="font-size: 70px; font-weight: bold;">
     Spring Bottom Sheet 🌟
 </div>
 
