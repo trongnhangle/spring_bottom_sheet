@@ -36,11 +36,15 @@ class MyHomePage extends StatelessWidget {
           onPressed: () {
             showModalBottomSheet(
               context: context,
-              builder: (context) => const SpringBottomSheet(
-                child: Center(
-                  child: Text(
-                    'This is your child!',
-                    style: TextStyle(fontSize: 24),
+              builder: (context) => SpringBottomSheet(
+                child: Container(
+                  color: Colors.white,
+                  height: 150,
+                  child: const Center(
+                    child: Text(
+                      'This is your child!',
+                      style: TextStyle(fontSize: 24),
+                    ),
                   ),
                 ),
               ),

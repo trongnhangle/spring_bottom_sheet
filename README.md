@@ -20,7 +20,7 @@ If this package makes your bottom sheets bounce with joy and saves you hours of 
 
 ---
 
-A Flutter package that provides a beautiful spring-animated bottom sheet with customizable properties and smooth animations.
+A lightweight Flutter package that provides a beautiful spring-animated bottom sheet with automatic height adjustment and smooth animations.
 
 [![pub package](https://img.shields.io/pub/v/spring_bottom_sheet.svg)](https://pub.dev/packages/spring_bottom_sheet)
 [![likes](https://img.shields.io/pub/likes/spring_bottom_sheet)](https://pub.dev/packages/spring_bottom_sheet/score)
@@ -30,12 +30,12 @@ A Flutter package that provides a beautiful spring-animated bottom sheet with cu
 
 ## Features
 
-- 🎯 Spring-like animation effect
-- 🎨 Fully customizable appearance
-- 📱 Responsive design
-- 🔄 Smooth drag gestures
-- ⚡ Easy to implement
-- 🛠 Highly configurable
+- 🎯 Natural spring animation effect
+- 📏 Auto-adjusting height based on content
+- 🎨 Smart height measurement system
+- 🚀 Optimized performance with value notifiers
+- 🪄 Simple to implement
+- 🎉 Zero external dependencies
 
 ## Installation
 
@@ -57,56 +57,22 @@ import 'package:spring_bottom_sheet/spring_bottom_sheet.dart';
 ### Basic Usage
 
 ```dart
-showSpringBottomSheet(
+showModalBottomSheet(
   context: context,
-  builder: (context) => Container(
-    padding: EdgeInsets.all(16),
-    child: Text('Hello from Spring Bottom Sheet!'),
+  builder: (context) => SpringBottomSheet(
+    child: Container(
+      color: Colors.white,
+      height: 150,
+      child: Center(
+        child: Text('Bottom Sheet Content'),
+      ),
+    ),
   ),
-);
-```
-
-### Advanced Usage with Custom Properties
-
-```dart
-showSpringBottomSheet(
-  context: context,
-  builder: (context) => YourCustomWidget(),
-  backgroundColor: Colors.white,
-  elevation: 8.0,
-  shape: RoundedRectangleBorder(
-    borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-  ),
-  clipBehavior: Clip.antiAliasWithSaveLayer,
   isScrollControlled: true,
-  isDismissible: true,
-  enableDrag: true,
-  showDragHandle: true,
 );
 ```
 
-## Properties
-
-| Property | Type | Default | Description |
-|----------|------|---------|-------------|
-| `context` | `BuildContext` | Required | The build context |
-| `builder` | `WidgetBuilder` | Required | Builder for bottom sheet content |
-| `backgroundColor` | `Color?` | `Colors.white` | Background color of the sheet |
-| `elevation` | `double?` | - | Sheet's elevation |
-| `shape` | `ShapeBorder?` | - | Shape of the bottom sheet |
-| `clipBehavior` | `Clip?` | - | How to clip the bottom sheet's content |
-| `constraints` | `BoxConstraints?` | - | Size constraints |
-| `barrierColor` | `Color?` | - | Color of the modal barrier |
-| `isScrollControlled` | `bool` | `false` | Whether the sheet is scrollable |
-| `scrollControlDisabledMaxHeightRatio` | `double` | `9.0/16.0` | Maximum height ratio when scroll is disabled |
-| `isDismissible` | `bool` | `true` | Can be dismissed by tapping outside |
-| `enableDrag` | `bool` | `true` | Can be dragged up/down |
-| `showDragHandle` | `bool?` | - | Shows a drag handle at the top |
-| `useSafeArea` | `bool` | `false` | Respects system UI padding |
-
-## Example Project
-
-Here's a complete example showing how to use Spring Bottom Sheet:
+### Complete Example
 
 ```dart
 import 'package:flutter/material.dart';
@@ -138,43 +104,26 @@ class MyHomePage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Spring Bottom Sheet Demo')),
+      backgroundColor: Colors.black,
       body: Center(
         child: ElevatedButton(
           child: const Text('Show Spring BottomSheet'),
           onPressed: () {
-            showSpringBottomSheet(
+            showModalBottomSheet(
               context: context,
-              builder: (context) => Container(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Text(
-                      'Spring Bottom Sheet',
-                      style: TextStyle(
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold,
-                      ),
+              builder: (context) => SpringBottomSheet(
+                child: Container(
+                  color: Colors.white,
+                  height: 150,
+                  child: const Center(
+                    child: Text(
+                      'This is your child!',
+                      style: TextStyle(fontSize: 24),
                     ),
-                    const SizedBox(height: 16),
-                    const Text(
-                      'This is a custom bottom sheet with spring animation!',
-                      textAlign: TextAlign.center,
-                    ),
-                    const SizedBox(height: 24),
-                    ElevatedButton(
-                      onPressed: () => Navigator.pop(context),
-                      child: const Text('Close'),
-                    ),
-                  ],
+                  ),
                 ),
               ),
               isScrollControlled: true,
-              backgroundColor: Colors.white,
-              shape: const RoundedRectangleBorder(
-                borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-              ),
             );
           },
         ),
@@ -184,18 +133,47 @@ class MyHomePage extends StatelessWidget {
 }
 ```
 
-## Animation Customization
+## How It Works
 
-The spring animation uses the following default parameters:
-- Mass: 1.0
-- Stiffness: 500.0
-- Damping: 25.0
+The `SpringBottomSheet` uses several advanced Flutter features to provide smooth animations:
 
-These values can be modified by extending the `SpringBottomSheet` widget and overriding the spring simulation parameters.
+1. **Height Measurement**: Uses a `GlobalKey` and `RenderBox` to accurately measure content height
+2. **Value Notifier**: Efficiently tracks and updates height changes
+3. **Spring Animation**: Implements custom spring physics with the following parameters:
+   ```dart
+   SpringDescription(
+     mass: 1,      // Controls the weight feeling
+     stiffness: 500, // Controls the spring force
+     damping: 25,   // Controls bounce reduction
+   )
+   ```
+
+## Properties
+
+| Property | Type | Required | Description |
+|----------|------|----------|-------------|
+| `child` | `Widget` | Yes | The content to be displayed inside the bottom sheet |
+
+## Key Features Explained
+
+1. **Automatic Height Measurement**
+   - Uses `GlobalKey` to measure actual content height
+   - Adjusts animation based on measured height
+   - No manual height calculations needed
+
+2. **Optimized Performance**
+   - Uses `ValueNotifier` for efficient updates
+   - Implements `SingleTickerProviderStateMixin` for animation
+   - Minimal rebuild strategy with `AnimatedBuilder`
+
+3. **Smart Animation System**
+   - Post-frame callback ensures accurate measurements
+   - Spring physics for natural feel
+   - Cleanup handling in dispose method
 
 ## Contributing
 
-Contributions are welcome! If you find a bug or want to add a feature, please feel free to:
+Contributions are welcome! If you find a bug or want to add a feature, please:
 1. Open an issue
 2. Create a pull request
 

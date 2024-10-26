@@ -1,73 +1,83 @@
-/// A customizable bottom sheet widget that animates into view with a spring effect.
-///
-/// This widget provides a bottom sheet that slides up from the bottom of the screen
-/// with a natural spring animation, making it feel more dynamic and interactive.
-/// The sheet also features rounded corners that animate as the sheet appears.
+/// A Flutter package that provides a bottom sheet with spring animation effect
 library spring_bottom_sheet;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/physics.dart';
 
-/// A stateful widget that implements a bottom sheet with spring animation.
+/// A widget that displays its child with a spring animation effect when shown from bottom
 ///
 /// Example usage:
 /// ```dart
 /// SpringBottomSheet(
 ///   child: Container(
-///     color: Colors.white,
-///     child: YourContent(),
+///     child: Text('Bottom Sheet Content'),
 ///   ),
 /// )
 /// ```
 class SpringBottomSheet extends StatefulWidget {
-  /// The widget to be displayed inside the bottom sheet.
-  ///
-  /// This will be wrapped with the necessary animation and styling widgets
-  /// to create the bottom sheet effect.
+  /// The widget to be displayed inside the bottom sheet
   final Widget child;
 
-  /// Creates a new [SpringBottomSheet] instance.
+  /// Creates a SpringBottomSheet widget
   ///
-  /// The [child] parameter must not be null and represents the content
-  /// to be displayed within the bottom sheet.
+  /// The [child] parameter must not be null and will be displayed
+  /// with a spring animation effect
   const SpringBottomSheet({super.key, required this.child});
 
   @override
   _SpringBottomSheetState createState() => _SpringBottomSheetState();
 }
 
-/// The state class for [SpringBottomSheet].
-///
-/// Handles the animation logic and builds the animated bottom sheet interface.
 class _SpringBottomSheetState extends State<SpringBottomSheet>
     with SingleTickerProviderStateMixin {
-  /// Controller for managing the spring animation.
-  ///
-  /// This controls both the height animation and the border radius animation
-  /// of the bottom sheet.
+  /// Controller for the spring animation
   late AnimationController _controller;
+
+  /// Key to measure the child widget's height
+  final GlobalKey _childKey = GlobalKey();
+
+  /// Notifier to track changes in child height
+  final ValueNotifier<double> _childHeight = ValueNotifier<double>(0);
 
   @override
   void initState() {
     super.initState();
 
-    // Initialize the animation controller with a medium duration
+    // Initialize animation controller with 500ms duration
     _controller = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 500),
     );
 
-    // Configure and start the spring animation
-    // The spring simulation parameters are tuned for a natural feel:
-    // - mass: affects the weight feeling of the animation
-    // - stiffness: affects how quickly the animation moves
-    // - damping: affects how quickly the animation settles
+    // Measure child height after first frame and start animation
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _measureChildHeight();
+      _startAnimation();
+    });
+  }
+
+  /// Measures the height of the child widget using RenderBox
+  void _measureChildHeight() {
+    final RenderBox? renderBox =
+        _childKey.currentContext?.findRenderObject() as RenderBox?;
+    if (renderBox != null) {
+      _childHeight.value = renderBox.size.height;
+    }
+  }
+
+  /// Starts the spring animation with custom spring parameters
+  ///
+  /// Uses SpringSimulation with:
+  /// - mass: 1
+  /// - stiffness: 500 (controls spring force)
+  /// - damping: 25 (controls bounce reduction)
+  void _startAnimation() {
     _controller.animateWith(
       SpringSimulation(
         const SpringDescription(
-          mass: 1, // The mass of the spring
-          stiffness: 500, // How rigid the spring is
-          damping: 25, // How quickly the spring's oscillations decrease
+          mass: 1,
+          stiffness: 500,
+          damping: 25,
         ),
         0, // Start value
         1, // End value
@@ -78,30 +88,37 @@ class _SpringBottomSheetState extends State<SpringBottomSheet>
 
   @override
   void dispose() {
-    // Clean up the animation controller when the widget is disposed
+    // Clean up resources
     _controller.dispose();
+    _childHeight.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    // Get the screen height to calculate the bottom sheet's height
-    final height = MediaQuery.sizeOf(context).height;
-
-    // Build the animated bottom sheet using AnimatedBuilder for efficiency
     return AnimatedBuilder(
       animation: _controller,
-      builder: (context, child) {
-        return ClipRRect(
-          // Animate the top border radius based on the animation value
-          borderRadius: BorderRadius.vertical(
-            top: Radius.circular(20 * _controller.value),
-          ),
-          child: SizedBox(
-            // Animate the height to be half of the screen height
-            height: height * 0.5 * _controller.value,
-            child: widget.child,
-          ),
+      builder: (context, _) {
+        return Stack(
+          children: [
+            // Hidden widget to measure true height
+            Offstage(
+              child: Container(
+                key: _childKey,
+                child: widget.child,
+              ),
+            ),
+            // Animated visible widget
+            ValueListenableBuilder<double>(
+              valueListenable: _childHeight,
+              builder: (context, height, _) {
+                return SizedBox(
+                  height: height * _controller.value,
+                  child: widget.child,
+                );
+              },
+            ),
+          ],
         );
       },
     );

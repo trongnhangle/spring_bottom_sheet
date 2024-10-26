@@ -1,5 +1,5 @@
 name: spring_bottom_sheet
-description: A Flutter package that adds a customizable spring animation to modal BottomSheet widgets.
+description: A lightweight Flutter package that provides a beautiful spring-animated bottom sheet with automatic height adjustment and smooth animations.
 version: 0.0.2
 homepage: https://github.com/trongnhangle/spring_bottom_sheet
 repository: https://github.com/trongnhangle/spring_bottom_sheet
