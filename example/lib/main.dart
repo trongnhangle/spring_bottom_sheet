@@ -1,3 +1,5 @@
+// ignore_for_file: depend_on_referenced_packages
+
 import 'package:flutter/material.dart';
 import 'package:spring_bottom_sheet/spring_bottom_sheet.dart';
 
@@ -32,12 +34,14 @@ class MyHomePage extends StatelessWidget {
         child: ElevatedButton(
           child: const Text('Show Spring BottomSheet'),
           onPressed: () {
-            showSpringBottomSheet(
+            showModalBottomSheet(
               context: context,
-              builder: (context) => const Center(
-                child: Text(
-                  'This is a custom child!',
-                  style: TextStyle(fontSize: 24),
+              builder: (context) => const SpringBottomSheet(
+                child: Center(
+                  child: Text(
+                    'This is your child!',
+                    style: TextStyle(fontSize: 24),
+                  ),
                 ),
               ),
               isScrollControlled: true,
