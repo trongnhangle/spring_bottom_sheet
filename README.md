@@ -4,25 +4,29 @@
 
 ### Hey Awesome Developer! ☕️
 
-If this package makes your bottom sheets bounce with joy and saves you hours of animation headaches, consider buying me a coffee! After all, great code runs on caffeine!
+If `spring_bottom_sheet` saves you time, makes your UI feel smoother, or helps you ship faster, please consider supporting its development.
+
+I have never received any sponsorship or financial support for this work before. Even a small contribution — just $1 — would mean more than you can imagine. It helps me keep maintaining this package, improving the documentation, fixing issues, and building more useful Flutter tools for the community.
 
 ```
-⭐️ "Good code is like good coffee - it keeps you running smoothly!" ⭐️
+⭐️ "Open-source code grows stronger when kind developers support the people behind it." ⭐️
 ```
 
 <p align="center">
-  <img src="https://media.giphy.com/media/3jVT4U5bilspG/giphy.gif" alt="Funny Coffee GIF" width="200">
+  <a href="https://ko-fi.com/trongnhangle">
+    <img src="assets/support-open-source.gif" alt="Support this project - even $1 helps" width="430">
+  </a>
 </p>
 
 <div align="center">
-  <h2>Support my caffeinated coding adventures:</h2>
+  <h2>Support this project and help me keep building:</h2>
   <p style="font-size: 18px;">
-    🎯 Buy Me a Coffee on <a href="https://ko-fi.com/trongnhangle" style="font-size: 22px; font-weight: bold;">Ko-fi</a><br>
-    💖 Feed My <a href="https://www.paypal.me/trongnhangle" style="font-size: 22px; font-weight: bold;">PayPal</a> Coffee Fund
+    🎯 Support me on <a href="https://ko-fi.com/trongnhangle" style="font-size: 22px; font-weight: bold;">Ko-fi</a><br>
+    💖 Send a small contribution via <a href="https://www.paypal.me/trongnhangle" style="font-size: 22px; font-weight: bold;">PayPal</a>
   </p>
 </div>
 
-*Your support helps me stay awake to create more awesome Flutter packages!* 😄
+*Every contribution, even $1, gives me more motivation to keep creating and improving open-source Flutter packages.* 🙏
 
 ---
 
@@ -36,7 +40,9 @@ optional staggered content animations.
 [![likes](https://img.shields.io/pub/likes/spring_bottom_sheet)](https://pub.dev/packages/spring_bottom_sheet/score)
 [![popularity](https://img.shields.io/pub/popularity/spring_bottom_sheet)](https://pub.dev/packages/spring_bottom_sheet/score)
 
-<img width="368" height="720" alt="demo_spring_bottom_sheet" src="https://github.com/user-attachments/assets/917d6c8f-716b-4a02-b32a-d45722b03d68" />
+<figure>
+  <img width="368" height="720" alt="Spring Bottom Sheet demo — smooth spring animation with snap points, drag handle, and backdrop dimming" src="https://github.com/user-attachments/assets/917d6c8f-716b-4a02-b32a-d45722b03d68" />
+</figure>
 
 
 ## ✨ Features
@@ -350,8 +356,13 @@ verify.
 
 ## ☕ Support
 
-If this package saves you time, you can support development through
+If this package saves you time or helps your project move faster, please consider
+supporting its continued development through
 [PayPal](https://www.paypal.me/trongnhangle).
+
+I have never received any sponsorship or financial support for this work before,
+so even a small contribution means a lot and helps me continue maintaining and
+building open-source Flutter packages.
 
 ## 📄 License
 
