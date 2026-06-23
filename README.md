@@ -65,6 +65,44 @@ First, import the package:
 import 'package:spring_bottom_sheet/spring_bottom_sheet.dart';
 ```
 
+### Scroll-linked resizing
+
+Scrollable content automatically participates in sheet resizing when it uses the
+primary scroll controller. This matches Flutter's `DraggableScrollableSheet`
+pattern: drag upward in the content to expand the sheet first, then scroll the
+content after the sheet reaches its tallest snap point; drag downward at the top
+of the content to collapse the sheet.
+
+```dart
+showSpringBottomSheet(
+  context: context,
+  snapSizes: const [0.32, 0.62, 0.92],
+  builder: (context) => ListView.builder(
+    padding: const EdgeInsets.all(20),
+    itemCount: 30,
+    itemBuilder: (context, index) => ListTile(title: Text('Item $index')),
+  ),
+);
+```
+
+If a scrollable child needs an explicit controller, read the coordinated
+controller from the sheet body context:
+
+```dart
+builder: (context) {
+  return ListView(
+    controller: SpringBottomSheetScrollController.of(context),
+    children: const [
+      ListTile(title: Text('First')),
+      ListTile(title: Text('Second')),
+    ],
+  );
+}
+```
+
+Set `enableContentDrag: false` to keep scroll gestures independent from sheet
+resizing.
+
 ### Basic Usage
 
 ```dart

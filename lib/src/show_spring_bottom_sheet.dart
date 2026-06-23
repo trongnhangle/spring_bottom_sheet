@@ -20,6 +20,7 @@ Future<T?> showSpringBottomSheet<T>({
   Clip clipBehavior = Clip.antiAlias,
   SpringBottomSheetController? controller,
   double elevation = 22,
+  bool enableContentDrag = true,
   bool enableDrag = true,
   WidgetBuilder? headerBuilder,
   int initialSnapIndex = 0,
@@ -51,6 +52,7 @@ Future<T?> showSpringBottomSheet<T>({
         builder: builder,
         clipBehavior: clipBehavior,
         elevation: elevation,
+        enableContentDrag: enableContentDrag,
         enableDrag: enableDrag,
         headerBuilder: headerBuilder,
         initialSnapIndex: initialSnapIndex,
@@ -80,6 +82,7 @@ class _SheetConfig {
     required this.builder,
     required this.clipBehavior,
     required this.elevation,
+    required this.enableContentDrag,
     required this.enableDrag,
     required this.headerBuilder,
     required this.initialSnapIndex,
@@ -99,6 +102,7 @@ class _SheetConfig {
   final WidgetBuilder builder;
   final Clip clipBehavior;
   final double elevation;
+  final bool enableContentDrag;
   final bool enableDrag;
   final WidgetBuilder? headerBuilder;
   final int initialSnapIndex;
@@ -236,6 +240,7 @@ class _SpringBottomSheetRoutePageState<T>
       clipBehavior: config.clipBehavior,
       controller: _controller,
       elevation: config.elevation,
+      enableContentDrag: config.enableContentDrag,
       enableDrag: config.enableDrag,
       header: config.headerBuilder != null
           ? Builder(builder: config.headerBuilder!)

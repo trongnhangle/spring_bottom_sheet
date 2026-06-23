@@ -231,9 +231,9 @@ class _SheetContent extends StatelessWidget {
         const Padding(
           padding: EdgeInsets.only(top: 10),
           child: _QueueItem(
-            icon: Icons.touch_app_rounded,
-            title: 'Drag gesture',
-            subtitle: 'Header owns the vertical pan recognizer',
+            icon: Icons.swap_vert_rounded,
+            title: 'Scroll-linked resize',
+            subtitle: 'Body scroll raises or lowers the sheet first',
             color: Color(0xFF2563EB),
           ),
         ),

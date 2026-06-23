@@ -53,6 +53,56 @@ void main() {
     }
   });
 
+  testWidgets('content scroll gestures expand and collapse the sheet', (
+    tester,
+  ) async {
+    tester.view.devicePixelRatio = 1;
+    tester.view.physicalSize = const Size(400, 800);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    addTearDown(tester.view.resetPhysicalSize);
+
+    final controller = SpringBottomSheetController();
+
+    await tester.pumpWidget(
+      _Harness(
+        controller: controller,
+        initialSnapIndex: 0,
+        open: true,
+        child: ListView.builder(
+          padding: const EdgeInsets.all(16),
+          itemCount: 40,
+          itemBuilder: (context, index) =>
+              SizedBox(height: 56, child: Text('Item $index')),
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 700));
+
+    final compactHeight = controller.height;
+
+    await tester.timedDrag(
+      find.text('Item 1'),
+      const Offset(0, -180),
+      const Duration(milliseconds: 600),
+    );
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 700));
+
+    final expandedHeight = controller.height;
+    expect(expandedHeight, greaterThan(compactHeight + 120));
+
+    await tester.timedDrag(
+      find.text('Item 1'),
+      const Offset(0, 180),
+      const Duration(milliseconds: 600),
+    );
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 700));
+
+    expect(controller.height, lessThan(expandedHeight - 120));
+  });
+
   testWidgets('showSpringBottomSheet completes with Navigator.pop result', (
     tester,
   ) async {
@@ -119,10 +169,16 @@ void main() {
 }
 
 class _Harness extends StatelessWidget {
-  const _Harness({required this.child, required this.open, this.controller});
+  const _Harness({
+    required this.child,
+    required this.open,
+    this.controller,
+    this.initialSnapIndex = 1,
+  });
 
   final Widget child;
   final SpringBottomSheetController? controller;
+  final int initialSnapIndex;
   final bool open;
 
   @override
@@ -141,7 +197,7 @@ class _Harness extends StatelessWidget {
               onDismissed: () {},
               open: open,
               snapSizes: const [0.32, 0.62, 0.92],
-              initialSnapIndex: 1,
+              initialSnapIndex: initialSnapIndex,
               child: child,
             ),
           ],
