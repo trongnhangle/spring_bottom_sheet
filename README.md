@@ -2,11 +2,9 @@
     Spring Bottom Sheet 🌟
 </div>
 
-
-
 ### Hey Awesome Developer! ☕️
 
-If this package makes your bottom sheets bounce with joy and saves you hours of animation headaches, consider buying me a coffee! After all, great code runs on caffeine! 
+If this package makes your bottom sheets bounce with joy and saves you hours of animation headaches, consider buying me a coffee! After all, great code runs on caffeine!
 
 ```
 ⭐️ "Good code is like good coffee - it keeps you running smoothly!" ⭐️
@@ -24,74 +22,155 @@ If this package makes your bottom sheets bounce with joy and saves you hours of 
   </p>
 </div>
 
-
 *Your support helps me stay awake to create more awesome Flutter packages!* 😄
 
 ---
 
-A lightweight Flutter package that provides a beautiful spring-animated bottom sheet with automatic height adjustment and smooth animations.
+# spring_bottom_sheet
+
+A dependency-free Flutter bottom sheet with spring physics, snap points,
+dragging, rubber-band resistance, backdrop dismissal, coordinated scrolling, and
+optional staggered content animations.
 
 [![pub package](https://img.shields.io/pub/v/spring_bottom_sheet.svg)](https://pub.dev/packages/spring_bottom_sheet)
 [![likes](https://img.shields.io/pub/likes/spring_bottom_sheet)](https://pub.dev/packages/spring_bottom_sheet/score)
 [![popularity](https://img.shields.io/pub/popularity/spring_bottom_sheet)](https://pub.dev/packages/spring_bottom_sheet/score)
 
-## Features
-
-- 🎯 Natural spring animation effect
-- 📏 Auto-adjusting height based on content
-- 🎨 Smart height measurement system
-- 🚀 Optimized performance with value notifiers
-- 🪄 Simple to implement
-- 🎉 Zero external dependencies
-
-## Demo
 ![spring_bottom_sheet](https://github.com/user-attachments/assets/c8483be3-ae89-4bcb-90f6-392833ef535c)
 
+## Features
+
+- Modal route helper with `showSpringBottomSheet`.
+- Reusable `SpringBottomSheet` widget for custom stacks and layouts.
+- Configurable snap points as viewport-height fractions.
+- Natural spring settling with Flutter's `SpringSimulation`.
+- Drag handle, optional header, dimmed backdrop, rounded Material surface, and
+  customizable shadow/elevation.
+- Scroll-linked resizing for `ListView`, `CustomScrollView`, and other primary
+  vertical scrollables.
+- Rubber-band resistance when the user drags beyond the sheet bounds.
+- Imperative `SpringBottomSheetController` for snapping and dismissal.
+- Dependency-free staggered list/item animations for sheet content.
+- No third-party runtime dependencies.
 
 ## Installation
 
-Add this to your package's `pubspec.yaml` file:
+Install from pub.dev:
+
+```bash
+flutter pub add spring_bottom_sheet
+```
+
+Or add it manually to `pubspec.yaml`:
 
 ```yaml
 dependencies:
-  spring_bottom_sheet: ^latest_version
+  spring_bottom_sheet: ^1.0.0
 ```
 
-## Usage
-
-First, import the package:
+Then import the package:
 
 ```dart
 import 'package:spring_bottom_sheet/spring_bottom_sheet.dart';
 ```
 
-### Scroll-linked resizing
+## Quick Start
 
-Scrollable content automatically participates in sheet resizing when it uses the
-primary scroll controller. This matches Flutter's `DraggableScrollableSheet`
-pattern: drag upward in the content to expand the sheet first, then scroll the
-content after the sheet reaches its tallest snap point; drag downward at the top
-of the content to collapse the sheet.
+Use `showSpringBottomSheet` when you want a modal bottom sheet route. It returns
+a `Future<T?>`, so you can receive a value from `Navigator.pop`.
+
+```dart
+Future<void> _openSheet(BuildContext context) async {
+  final result = await showSpringBottomSheet<String>(
+    context: context,
+    initialSnapIndex: 1,
+    snapSizes: const [0.32, 0.62, 0.92],
+    headerBuilder: (context) {
+      return Padding(
+        padding: const EdgeInsets.fromLTRB(20, 12, 12, 8),
+        child: Row(
+          children: [
+            const Expanded(
+              child: Text(
+                'Choose an item',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
+              ),
+            ),
+            IconButton(
+              icon: const Icon(Icons.close_rounded),
+              onPressed: () => Navigator.of(context).pop(),
+            ),
+          ],
+        ),
+      );
+    },
+    builder: (context) {
+      return ListView.builder(
+        padding: const EdgeInsets.fromLTRB(20, 8, 20, 28),
+        itemCount: 24,
+        itemBuilder: (context, index) {
+          return ListTile(
+            title: Text('Item $index'),
+            onTap: () => Navigator.of(context).pop('Item $index'),
+          );
+        },
+      );
+    },
+  );
+
+  debugPrint('Selected: $result');
+}
+```
+
+## Snap Points
+
+`snapSizes` are fractions of the available viewport height. The default value is:
+
+```dart
+const [0.35, 0.65, 0.92]
+```
+
+For example, `0.62` means the sheet snaps to 62% of the available height. The
+available height is calculated from the parent constraints minus the top safe
+area and `maxTopGap`, so the largest snap point can still leave breathing room
+near the top of the screen.
+
+Values are clamped between `0.0` and `1.0`, sorted, and de-duplicated. If every
+value is invalid or empty after normalization, the sheet falls back to a single
+60% snap point.
+
+## Scroll-Linked Resizing
+
+Scrollable content automatically works with the sheet when it uses the primary
+scroll controller. The interaction mirrors Flutter's `DraggableScrollableSheet`:
+drag upward to expand the sheet first, then scroll the content after the sheet
+reaches its largest snap point; drag downward at the top of the content to
+collapse the sheet.
 
 ```dart
 showSpringBottomSheet(
   context: context,
   snapSizes: const [0.32, 0.62, 0.92],
-  builder: (context) => ListView.builder(
-    padding: const EdgeInsets.all(20),
-    itemCount: 30,
-    itemBuilder: (context, index) => ListTile(title: Text('Item $index')),
-  ),
+  builder: (context) {
+    return ListView.builder(
+      padding: const EdgeInsets.all(20),
+      itemCount: 40,
+      itemBuilder: (context, index) {
+        return ListTile(title: Text('Row $index'));
+      },
+    );
+  },
 );
 ```
 
-If a scrollable child needs an explicit controller, read the coordinated
-controller from the sheet body context:
+If your scrollable needs an explicit controller, read the coordinated controller
+from the sheet body context:
 
 ```dart
 builder: (context) {
   return ListView(
     controller: SpringBottomSheetScrollController.of(context),
+    padding: const EdgeInsets.all(20),
     children: const [
       ListTile(title: Text('First')),
       ListTile(title: Text('Second')),
@@ -100,154 +179,202 @@ builder: (context) {
 }
 ```
 
-Set `enableContentDrag: false` to keep scroll gestures independent from sheet
-resizing.
+Set `enableContentDrag: false` when you want the scrollable to handle its own
+drag gestures independently from the sheet.
 
-### Basic Usage
+## Controller
+
+Pass a `SpringBottomSheetController` when you need to control the sheet from
+buttons, callbacks, or another widget.
 
 ```dart
-showModalBottomSheet(
+final sheetController = SpringBottomSheetController();
+
+showSpringBottomSheet(
   context: context,
-  builder: (context) => SpringBottomSheet(
-    child: Container(
-      color: Colors.white,
-      height: 150,
-      child: Center(
-        child: Text('Bottom Sheet Content'),
-      ),
-    ),
-  ),
-  isScrollControlled: true,
+  controller: sheetController,
+  headerBuilder: (context) {
+    return Row(
+      children: [
+        TextButton(
+          onPressed: () => sheetController.snapToIndex(0),
+          child: const Text('Compact'),
+        ),
+        TextButton(
+          onPressed: () => sheetController.snapToIndex(2),
+          child: const Text('Expand'),
+        ),
+        IconButton(
+          icon: const Icon(Icons.close_rounded),
+          onPressed: () => sheetController.dismiss(),
+        ),
+      ],
+    );
+  },
+  builder: (context) => const Center(child: Text('Controlled sheet')),
 );
 ```
 
-### Complete Example
+Available controller members:
+
+| Member | Description |
+| --- | --- |
+| `height` | Current sheet height in logical pixels. |
+| `snapToIndex(index, velocity: 0)` | Animates to the snap point at `index`. The index is clamped to the available range. |
+| `snapToNearest(velocity: 0)` | Animates to the nearest snap point from the current height. |
+| `dismiss(velocity: 0)` | Animates to the closed position when dismissal is configured. |
+
+## Using the Widget Directly
+
+Use `SpringBottomSheet` directly when the sheet is part of your own widget tree,
+for example inside a `Stack`.
 
 ```dart
-import 'package:flutter/material.dart';
-import 'package:spring_bottom_sheet/spring_bottom_sheet.dart';
+class SheetHost extends StatefulWidget {
+  const SheetHost({super.key});
 
-void main() {
-  runApp(const MyApp());
+  @override
+  State<SheetHost> createState() => _SheetHostState();
 }
 
-class MyApp extends StatelessWidget {
-  const MyApp({Key? key}) : super(key: key);
+class _SheetHostState extends State<SheetHost> {
+  bool _open = false;
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      debugShowCheckedModeBanner: false,
-      title: 'Spring BottomSheet Demo',
-      theme: ThemeData(
-        primarySwatch: Colors.blue,
-      ),
-      home: const MyHomePage(),
-    );
-  }
-}
-
-class MyHomePage extends StatelessWidget {
-  const MyHomePage({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.black,
-      body: Center(
-        child: ElevatedButton(
-          child: const Text('Show Spring BottomSheet'),
-          onPressed: () {
-            showModalBottomSheet(
-              context: context,
-              builder: (context) => SpringBottomSheet(
-                child: Container(
-                  color: Colors.white,
-                  height: 150,
-                  child: const Center(
-                    child: Text(
-                      'This is your child!',
-                      style: TextStyle(fontSize: 24),
-                    ),
-                  ),
-                ),
-              ),
-              isScrollControlled: true,
-            );
-          },
+    return Stack(
+      children: [
+        Center(
+          child: FilledButton(
+            onPressed: () => setState(() => _open = true),
+            child: const Text('Open sheet'),
+          ),
         ),
-      ),
+        SpringBottomSheet(
+          open: _open,
+          onDismissed: () => setState(() => _open = false),
+          snapSizes: const [0.3, 0.6, 0.9],
+          header: const Padding(
+            padding: EdgeInsets.all(16),
+            child: Text('Custom header'),
+          ),
+          child: const Center(child: Text('Sheet body')),
+        ),
+      ],
     );
   }
 }
 ```
 
-## How It Works
+When you use the widget directly, provide `onDismissed` if you want backdrop
+taps, swipe-down gestures, or controller dismissal to close the sheet.
 
-The `SpringBottomSheet` uses several advanced Flutter features to provide smooth animations:
+## Staggered Content
 
-1. **Height Measurement**: Uses a `GlobalKey` and `RenderBox` to accurately measure content height
-2. **Value Notifier**: Efficiently tracks and updates height changes
-3. **Spring Animation**: Implements custom spring physics with the following parameters:
-   ```dart
-   SpringDescription(
-     mass: 1,      // Controls the weight feeling
-     stiffness: 500, // Controls the spring force
-     damping: 25,   // Controls bounce reduction
-   )
-   ```
+`SpringStaggeredListView` fades and slides each direct child from the bottom.
+It is useful for bottom-sheet menus, action lists, forms, and selection panels.
 
-## Properties
+```dart
+SpringStaggeredListView(
+  padding: const EdgeInsets.fromLTRB(20, 8, 20, 28),
+  initialDelay: const Duration(milliseconds: 120),
+  staggerDelay: const Duration(milliseconds: 60),
+  children: const [
+    ListTile(title: Text('Profile')),
+    ListTile(title: Text('Settings')),
+    ListTile(title: Text('Sign out')),
+  ],
+)
+```
 
-| Property | Type | Required | Description |
-|----------|------|----------|-------------|
-| `child` | `Widget` | Yes | The content to be displayed inside the bottom sheet |
+Use `SpringStaggeredItem` when you want to animate individual widgets outside a
+list.
 
-## Key Features Explained
+```dart
+SpringStaggeredItem(
+  delay: const Duration(milliseconds: 180),
+  child: FilledButton(
+    onPressed: () {},
+    child: const Text('Continue'),
+  ),
+)
+```
 
-1. **Automatic Height Measurement**
-   - Uses `GlobalKey` to measure actual content height
-   - Adjusts animation based on measured height
-   - No manual height calculations needed
+## API Reference
 
-2. **Optimized Performance**
-   - Uses `ValueNotifier` for efficient updates
-   - Implements `SingleTickerProviderStateMixin` for animation
-   - Minimal rebuild strategy with `AnimatedBuilder`
+### `showSpringBottomSheet`
 
-3. **Smart Animation System**
-   - Post-frame callback ensures accurate measurements
-   - Spring physics for natural feel
-   - Cleanup handling in dispose method
+| Parameter | Default | Description |
+| --- | --- | --- |
+| `context` | required | Build context used to find the target `Navigator`. |
+| `builder` | required | Builds the sheet body. |
+| `backdropColor` | `Color(0x990F172A)` | Backdrop color at full sheet progress. |
+| `backgroundColor` | `Colors.white` | Sheet surface color. |
+| `borderRadius` | `BorderRadius.vertical(top: Radius.circular(28))` | Sheet surface shape. |
+| `clipBehavior` | `Clip.antiAlias` | Clip behavior for the sheet surface. |
+| `controller` | `null` | Optional imperative controller. |
+| `elevation` | `22` | Material elevation for the sheet. |
+| `enableContentDrag` | `true` | Lets scroll gestures resize the sheet before content scrolls. |
+| `enableDrag` | `true` | Enables dragging from the handle/header area. |
+| `headerBuilder` | `null` | Builds custom content above the body and below the drag handle. |
+| `initialSnapIndex` | `0` | Snap index used when the sheet opens. |
+| `isDismissible` | `true` | Allows backdrop taps and swipe-down dismissal. |
+| `maxTopGap` | `14` | Minimum visual gap from the top safe area at the largest snap. |
+| `routeSettings` | `null` | Optional route settings for Navigator integrations. |
+| `rubberBandConstant` | `0.55` | Resistance applied when dragging beyond snap bounds. |
+| `shadowColor` | `Color(0x33111827)` | Material shadow color. |
+| `showDragHandle` | `true` | Shows the default top drag handle. |
+| `snapSizes` | `[0.35, 0.65, 0.92]` | Snap points as viewport-height fractions. |
+| `spring` | `SpringDescription(mass: 1, stiffness: 210, damping: 20)` | Spring physics for open, close, and snap animations. |
+| `springTolerance` | `Tolerance(distance: 0.6, velocity: 0.6)` | Tolerance for the spring simulation. |
+| `useRootNavigator` | `false` | Pushes the route on the root navigator when `true`. |
+
+### `SpringBottomSheet`
+
+`SpringBottomSheet` exposes the same visual, gesture, snap, and spring options
+as the route API. It also has:
+
+| Property | Description |
+| --- | --- |
+| `child` | Required body content. |
+| `open` | Required flag that controls whether the sheet is visible. |
+| `header` | Optional header widget. Dragging is attached to the handle/header area. |
+| `onDismissed` | Called after the sheet animates to the closed position through a dismiss action. |
+
+## Example App
+
+Run the included example to see snap points, scroll-linked resizing, dismissal,
+and staggered content together:
+
+```bash
+cd example
+flutter run
+```
+
+## Testing
+
+Run the package tests with:
+
+```bash
+flutter test
+```
+
+## Requirements
+
+- Dart SDK `>=3.8.0 <4.0.0`
+- Flutter SDK compatible with the package environment
 
 ## Contributing
 
-Contributions are welcome! If you find a bug or want to add a feature, please:
-1. Open an issue
-2. Create a pull request
+Issues and pull requests are welcome. When changing behavior, please include a
+focused test or update the example app so the interaction remains easy to
+verify.
+
+## Support
+
+If this package saves you time, you can support development through
+[PayPal](https://www.paypal.me/trongnhangle).
 
 ## License
 
-```
-MIT License
-
-Copyright (c) 2024 TRONG NHAN NGUYEN LE
-
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
-```
+This package is released under the [MIT License](LICENSE).

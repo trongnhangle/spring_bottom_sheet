@@ -64,7 +64,7 @@ class _SpringBottomSheetDemoState extends State<SpringBottomSheetDemo> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Spring Sheet',
+                        'Spring Bottom Sheet',
                         style: Theme.of(context).textTheme.headlineMedium
                             ?.copyWith(
                               color: const Color(0xFF111827),
