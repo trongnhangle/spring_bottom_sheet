@@ -12,6 +12,8 @@ I have never received any sponsorship or financial support for this work before.
 ⭐️ "Open-source code grows stronger when kind developers support the people behind it." ⭐️
 ```
 
+<img width="720" height="330" alt="support-open-source" src="https://github.com/user-attachments/assets/2d8905a8-f089-4e87-a0fa-e40c09b16d30" />
+
 <p align="center">
   <a href="https://ko-fi.com/trongnhangle">
     <img src="assets/support-open-source.gif" alt="Support this project - even $1 helps" width="430">
