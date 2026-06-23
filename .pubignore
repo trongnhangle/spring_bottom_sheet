@@ -1,0 +1,10 @@
+.dart_tool/
+.idea/
+.metadata
+*.iml
+build/
+pubspec.lock
+.codex_flutter_web.*.log
+react-spring-bottom-sheet/
+example/.dart_tool/
+example/build/

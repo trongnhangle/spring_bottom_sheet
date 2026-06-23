@@ -1,6 +1,6 @@
 name: spring_bottom_sheet
-description: A lightweight Flutter package that provides a beautiful spring-animated bottom sheet with automatic height adjustment and smooth animations.
-version: 0.0.3
+description: A dependency-free Flutter bottom sheet with spring physics, snap points, dragging, rubber-banding, and staggered content animations.
+version: 1.0.0
 homepage: https://github.com/trongnhangle/spring_bottom_sheet
 repository: https://github.com/trongnhangle/spring_bottom_sheet
 issue_tracker: https://github.com/trongnhangle/spring_bottom_sheet/issues
@@ -14,7 +14,7 @@ funding:
   - https://www.paypal.me/trongnhangle
 
 environment:
-  sdk: '>=3.4.1 <4.0.0'
+  sdk: '>=3.8.0 <4.0.0'
   flutter: ">=1.17.0"
 
 dependencies:
@@ -24,6 +24,6 @@ dependencies:
 dev_dependencies:
   flutter_test:
     sdk: flutter
-  flutter_lints: ^3.0.0
+  flutter_lints: ^6.0.0
 
 flutter:
