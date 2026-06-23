@@ -36,7 +36,8 @@ optional staggered content animations.
 [![likes](https://img.shields.io/pub/likes/spring_bottom_sheet)](https://pub.dev/packages/spring_bottom_sheet/score)
 [![popularity](https://img.shields.io/pub/popularity/spring_bottom_sheet)](https://pub.dev/packages/spring_bottom_sheet/score)
 
-![spring_bottom_sheet](https://github.com/user-attachments/assets/c8483be3-ae89-4bcb-90f6-392833ef535c)
+<img width="368" height="720" alt="demo_spring_bottom_sheet" src="https://github.com/user-attachments/assets/917d6c8f-716b-4a02-b32a-d45722b03d68" />
+
 
 ## Features
 
