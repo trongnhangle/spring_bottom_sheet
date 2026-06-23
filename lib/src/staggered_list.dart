@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 class SpringStaggeredListView extends StatelessWidget {
   const SpringStaggeredListView({
     required this.children,
+    this.animate = true,
     this.clipBehavior = Clip.hardEdge,
     this.controller,
     this.duration = const Duration(milliseconds: 420),
@@ -25,6 +26,10 @@ class SpringStaggeredListView extends StatelessWidget {
   /// Children to display and animate. Every direct child is automatically
   /// wrapped with the stagger effect.
   final List<Widget> children;
+
+  /// Whether to animate children with a staggered fade-and-slide effect.
+  /// Defaults to true.
+  final bool animate;
 
   final Clip clipBehavior;
   final ScrollController? controller;
@@ -54,6 +59,7 @@ class SpringStaggeredListView extends StatelessWidget {
         for (var index = 0; index < children.length; index++)
           SpringStaggeredItem(
             key: children[index].key,
+            animate: animate,
             delay: initialDelay + (staggerDelay * index),
             duration: duration,
             verticalOffset: verticalOffset,
@@ -69,6 +75,7 @@ class SpringStaggeredListView extends StatelessWidget {
 class SpringStaggeredItem extends StatefulWidget {
   const SpringStaggeredItem({
     required this.child,
+    this.animate = true,
     this.curve = Curves.easeOutCubic,
     this.delay = Duration.zero,
     this.duration = const Duration(milliseconds: 420),
@@ -77,6 +84,10 @@ class SpringStaggeredItem extends StatefulWidget {
   });
 
   final Widget child;
+
+  /// Whether to apply the fade-and-slide animation. Defaults to true.
+  final bool animate;
+
   final Curve curve;
   final Duration delay;
   final Duration duration;
@@ -135,6 +146,8 @@ class _SpringStaggeredItemState extends State<SpringStaggeredItem>
 
   @override
   Widget build(BuildContext context) {
+    if (!widget.animate) return widget.child;
+
     return FadeTransition(
       opacity: _animation,
       child: AnimatedBuilder(

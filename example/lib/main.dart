@@ -34,6 +34,8 @@ class SpringBottomSheetDemo extends StatefulWidget {
 }
 
 class _SpringBottomSheetDemoState extends State<SpringBottomSheetDemo> {
+  bool _animateContent = true;
+
   Future<void> _showSheet({int initialSnapIndex = 1}) {
     return showSpringBottomSheet<void>(
       context: context,
@@ -41,7 +43,7 @@ class _SpringBottomSheetDemoState extends State<SpringBottomSheetDemo> {
       snapSizes: const [0.32, 0.62, 0.92],
       headerBuilder: (context) =>
           _SheetHeader(onClose: () => Navigator.of(context).pop()),
-      builder: (context) => const _SheetContent(),
+      builder: (context) => _SheetContent(animate: _animateContent),
     );
   }
 
@@ -97,6 +99,13 @@ class _SpringBottomSheetDemoState extends State<SpringBottomSheetDemo> {
               ),
             ),
             const SizedBox(height: 10),
+            _ToggleTile(
+              icon: Icons.animation_rounded,
+              title: 'Animate content',
+              subtitle: 'Staggered fade-slide on open',
+              value: _animateContent,
+              onChanged: (v) => setState(() => _animateContent = v),
+            ),
             _ActionTile(
               icon: Icons.vertical_align_bottom_rounded,
               title: 'Open 32%',
@@ -178,13 +187,16 @@ class _SheetHeader extends StatelessWidget {
 }
 
 class _SheetContent extends StatelessWidget {
-  const _SheetContent();
+  const _SheetContent({this.animate = true});
+
+  final bool animate;
 
   @override
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
 
     return SpringStaggeredListView(
+      animate: animate,
       padding: const EdgeInsets.fromLTRB(20, 4, 20, 28),
       children: [
         Row(
@@ -406,6 +418,74 @@ class _ActionTile extends StatelessWidget {
                 ),
               ],
             ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _ToggleTile extends StatelessWidget {
+  const _ToggleTile({
+    required this.icon,
+    required this.onChanged,
+    required this.subtitle,
+    required this.title,
+    required this.value,
+  });
+
+  final IconData icon;
+  final ValueChanged<bool> onChanged;
+  final String subtitle;
+  final String title;
+  final bool value;
+
+  @override
+  Widget build(BuildContext context) {
+    const color = Color(0xFFF59E0B);
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: Material(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        child: Padding(
+          padding: const EdgeInsets.all(14),
+          child: Row(
+            children: [
+              Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  color: Color.lerp(Colors.white, color, 0.1),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Icon(Icons.animation_rounded, color: color),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        color: const Color(0xFF111827),
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      subtitle,
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: const Color(0xFF64748B),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Switch(value: value, onChanged: onChanged),
+            ],
           ),
         ),
       ),
