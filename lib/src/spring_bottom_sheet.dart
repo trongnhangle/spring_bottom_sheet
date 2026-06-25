@@ -661,22 +661,18 @@ class _SheetSurface extends StatelessWidget {
     Widget content = Column(
       mainAxisSize: expandBody ? MainAxisSize.max : MainAxisSize.min,
       children: [
-        Column(
-          children: [
-            if (showDragHandle) ...[
-              const SizedBox(height: 10),
-              Container(
-                width: 44,
-                height: 5,
-                decoration: BoxDecoration(
-                  color: const Color(0xFFCBD5E1),
-                  borderRadius: BorderRadius.circular(999),
-                ),
-              ),
-            ],
-            ?header,
-          ],
-        ),
+        if (showDragHandle) ...[
+          const SizedBox(height: 10),
+          Container(
+            width: 44,
+            height: 5,
+            decoration: BoxDecoration(
+              color: const Color(0xFFCBD5E1),
+              borderRadius: BorderRadius.circular(999),
+            ),
+          ),
+        ],
+        ?header,
         if (expandBody)
           Expanded(child: _buildBody())
         else
