@@ -35,15 +35,17 @@ class SpringBottomSheetDemo extends StatefulWidget {
 
 class _SpringBottomSheetDemoState extends State<SpringBottomSheetDemo> {
   bool _animateContent = true;
+  bool _autoSnapSize = true;
 
   Future<void> _showSheet({int initialSnapIndex = 1}) {
     return showSpringBottomSheet<void>(
       context: context,
-      initialSnapIndex: initialSnapIndex,
-      snapSizes: const [0.32, 0.62, 0.92],
+      initialSnapIndex: _autoSnapSize ? 0 : initialSnapIndex,
+      snapSizes: _autoSnapSize ? null : const [0.32, 0.62, 0.92],
       headerBuilder: (context) =>
           _SheetHeader(onClose: () => Navigator.of(context).pop()),
-      builder: (context) => _SheetContent(animate: _animateContent),
+      builder: (context) =>
+          _SheetContent(animate: _animateContent, autoSnapSize: _autoSnapSize),
     );
   }
 
@@ -89,7 +91,10 @@ class _SpringBottomSheetDemoState extends State<SpringBottomSheetDemo> {
               ],
             ),
             const SizedBox(height: 24),
-            _OverviewStrip(colorScheme: colorScheme),
+            _OverviewStrip(
+              autoSnapSize: _autoSnapSize,
+              colorScheme: colorScheme,
+            ),
             const SizedBox(height: 18),
             Text(
               'Interactions',
@@ -106,27 +111,44 @@ class _SpringBottomSheetDemoState extends State<SpringBottomSheetDemo> {
               value: _animateContent,
               onChanged: (v) => setState(() => _animateContent = v),
             ),
-            _ActionTile(
-              icon: Icons.vertical_align_bottom_rounded,
-              title: 'Open 32%',
-              subtitle: 'Compact state',
-              color: const Color(0xFF059669),
-              onTap: () => _showSheet(initialSnapIndex: 0),
+            _ToggleTile(
+              icon: Icons.fit_screen_rounded,
+              title: 'Auto snap size',
+              subtitle: 'Snap to the rendered content height',
+              value: _autoSnapSize,
+              onChanged: (v) => setState(() => _autoSnapSize = v),
             ),
-            _ActionTile(
-              icon: Icons.unfold_more_rounded,
-              title: 'Open 62%',
-              subtitle: 'Balanced state',
-              color: const Color(0xFF2563EB),
-              onTap: () => _showSheet(initialSnapIndex: 1),
-            ),
-            _ActionTile(
-              icon: Icons.vertical_align_top_rounded,
-              title: 'Open 92%',
-              subtitle: 'Expanded state',
-              color: const Color(0xFF7C3AED),
-              onTap: () => _showSheet(initialSnapIndex: 2),
-            ),
+            if (_autoSnapSize)
+              _ActionTile(
+                icon: Icons.fit_screen_rounded,
+                title: 'Open auto',
+                subtitle: 'Content-height snap',
+                color: const Color(0xFF2563EB),
+                onTap: _showSheet,
+              )
+            else ...[
+              _ActionTile(
+                icon: Icons.vertical_align_bottom_rounded,
+                title: 'Open 32%',
+                subtitle: 'Compact state',
+                color: const Color(0xFF059669),
+                onTap: () => _showSheet(initialSnapIndex: 0),
+              ),
+              _ActionTile(
+                icon: Icons.unfold_more_rounded,
+                title: 'Open 62%',
+                subtitle: 'Balanced state',
+                color: const Color(0xFF2563EB),
+                onTap: () => _showSheet(initialSnapIndex: 1),
+              ),
+              _ActionTile(
+                icon: Icons.vertical_align_top_rounded,
+                title: 'Open 92%',
+                subtitle: 'Expanded state',
+                color: const Color(0xFF7C3AED),
+                onTap: () => _showSheet(initialSnapIndex: 2),
+              ),
+            ],
           ],
         ),
       ),
@@ -187,9 +209,10 @@ class _SheetHeader extends StatelessWidget {
 }
 
 class _SheetContent extends StatelessWidget {
-  const _SheetContent({this.animate = true});
+  const _SheetContent({this.animate = true, this.autoSnapSize = false});
 
   final bool animate;
+  final bool autoSnapSize;
 
   @override
   Widget build(BuildContext context) {
@@ -198,6 +221,7 @@ class _SheetContent extends StatelessWidget {
     return SpringStaggeredListView(
       animate: animate,
       padding: const EdgeInsets.fromLTRB(20, 4, 20, 28),
+      shrinkWrap: autoSnapSize,
       children: [
         Row(
           children: const [
@@ -261,8 +285,9 @@ class _SheetContent extends StatelessWidget {
 }
 
 class _OverviewStrip extends StatelessWidget {
-  const _OverviewStrip({required this.colorScheme});
+  const _OverviewStrip({required this.autoSnapSize, required this.colorScheme});
 
+  final bool autoSnapSize;
   final ColorScheme colorScheme;
 
   @override
@@ -279,24 +304,24 @@ class _OverviewStrip extends StatelessWidget {
           Expanded(
             child: _OverviewMetric(
               label: 'Snaps',
-              value: '3',
+              value: autoSnapSize ? '1' : '3',
               color: colorScheme.primary,
             ),
           ),
           const SizedBox(width: 12),
-          const Expanded(
+          Expanded(
             child: _OverviewMetric(
               label: 'Min',
-              value: '32%',
-              color: Color(0xFF059669),
+              value: autoSnapSize ? 'Auto' : '32%',
+              color: const Color(0xFF059669),
             ),
           ),
           const SizedBox(width: 12),
-          const Expanded(
+          Expanded(
             child: _OverviewMetric(
               label: 'Max',
-              value: '92%',
-              color: Color(0xFF7C3AED),
+              value: autoSnapSize ? 'Body' : '92%',
+              color: const Color(0xFF7C3AED),
             ),
           ),
         ],
@@ -460,7 +485,7 @@ class _ToggleTile extends StatelessWidget {
                   color: Color.lerp(Colors.white, color, 0.1),
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: const Icon(Icons.animation_rounded, color: color),
+                child: Icon(icon, color: color),
               ),
               const SizedBox(width: 14),
               Expanded(

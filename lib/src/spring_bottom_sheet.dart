@@ -4,6 +4,7 @@ import 'dart:math' as math;
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/physics.dart';
+import 'package:flutter/rendering.dart';
 
 /// Controls a [SpringBottomSheet] without exposing a [GlobalKey].
 class SpringBottomSheetController {
@@ -105,7 +106,7 @@ class SpringBottomSheet extends StatefulWidget {
     this.rubberBandConstant = 0.55,
     this.shadowColor = const Color(0x33111827),
     this.showDragHandle = true,
-    this.snapSizes = const [0.35, 0.65, 0.92],
+    this.snapSizes,
     this.spring = const SpringDescription(mass: 1, stiffness: 210, damping: 20),
     this.springTolerance = const Tolerance(distance: 0.6, velocity: 0.6),
     super.key,
@@ -139,10 +140,10 @@ class SpringBottomSheet extends StatefulWidget {
   /// sheet before the body scrolls.
   final bool enableContentDrag;
 
-  /// Whether the sheet can be dragged by the handle/header area.
+  /// Whether the sheet can be dragged by its surface.
   final bool enableDrag;
 
-  /// Optional header. Dragging is attached to the handle/header area.
+  /// Optional header above the body and below the drag handle.
   final Widget? header;
 
   /// Initial snap index when opening from closed state.
@@ -167,7 +168,10 @@ class SpringBottomSheet extends StatefulWidget {
   final bool showDragHandle;
 
   /// Snap sizes as fractions of the available viewport height.
-  final List<double> snapSizes;
+  ///
+  /// When omitted, the sheet measures its rendered content and uses that
+  /// height as a single snap point, capped by the available viewport height.
+  final List<double>? snapSizes;
 
   /// Spring physics used for open, close, and snap animations.
   final SpringDescription spring;
@@ -291,6 +295,10 @@ class _SpringBottomSheetState extends State<SpringBottomSheet>
   }
 
   void _handleDragStart(DragStartDetails details) {
+    _beginDrag();
+  }
+
+  void _beginDrag() {
     if (_snapPoints.isEmpty) {
       return;
     }
@@ -301,11 +309,15 @@ class _SpringBottomSheetState extends State<SpringBottomSheet>
   }
 
   void _handleDragUpdate(DragUpdateDetails details) {
+    _updateDrag(details.delta.dy);
+  }
+
+  void _updateDrag(double userOffsetDelta) {
     if (_snapPoints.isEmpty) {
       return;
     }
 
-    _dragOffset += details.delta.dy;
+    _dragOffset += userOffsetDelta;
 
     final rawHeight = _dragStartHeight - _dragOffset;
     final lowerBound = widget.onDismissed == null || !widget.isDismissible
@@ -350,7 +362,10 @@ class _SpringBottomSheetState extends State<SpringBottomSheet>
     unawaited(_animateTo(_nearestSnap(projected), velocity: velocity));
   }
 
-  bool _shouldResizeFromContentDrag(double userOffsetDelta) {
+  bool _shouldResizeFromContentDrag(
+    double userOffsetDelta, {
+    required bool listCanScroll,
+  }) {
     if (!widget.enableContentDrag || _snapPoints.isEmpty) {
       return false;
     }
@@ -367,8 +382,8 @@ class _SpringBottomSheetState extends State<SpringBottomSheet>
       return true;
     }
 
-    if (isAtMax && userOffsetDelta > 0) {
-      return true;
+    if (isAtMax) {
+      return !listCanScroll;
     }
 
     if (isAtLowerBound && userOffsetDelta < 0) {
@@ -380,51 +395,27 @@ class _SpringBottomSheetState extends State<SpringBottomSheet>
     return isAtMinSnap && userOffsetDelta > 0;
   }
 
-  void _applyContentDragDelta(double heightDelta) {
-    if (_snapPoints.isEmpty) {
-      return;
-    }
-
-    _heightController.stop();
-
-    final lowerBound = widget.onDismissed == null || !widget.isDismissible
-        ? _minSnap
-        : 0.0;
-    final nextHeight = _rubberBandIfOutOfBounds(
-      _heightController.value + heightDelta,
-      min: lowerBound,
-      max: _maxSnap,
-      constant: widget.rubberBandConstant,
-    );
-
-    _heightController.value = nextHeight;
-  }
-
-  bool _shouldSettleContentDrag(
-    double velocity, {
-    required bool listShouldScroll,
-  }) {
-    if (!widget.enableContentDrag || _snapPoints.isEmpty) {
-      return false;
-    }
-
-    if (listShouldScroll) {
-      return false;
-    }
-
-    if (velocity > 0 && _heightController.value >= _maxSnap - 0.6) {
-      return false;
-    }
-
-    return true;
-  }
-
   void _handleDragCancel() {
     unawaited(snapToNearest());
   }
 
   void _syncSnapPoints(List<double> nextSnapPoints) {
     if (_sameSnapPoints(_snapPoints, nextSnapPoints)) {
+      return;
+    }
+
+    if (nextSnapPoints.isEmpty) {
+      final previousHeight = _heightController.value;
+      _snapPoints = const [];
+      final version = ++_layoutVersion;
+
+      if (previousHeight > 0.6) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted && version == _layoutVersion) {
+            unawaited(_animateTo(0, velocity: 0));
+          }
+        });
+      }
       return;
     }
 
@@ -455,9 +446,18 @@ class _SpringBottomSheetState extends State<SpringBottomSheet>
     });
   }
 
+  void _handleAutoSurfaceSizeChanged(Size size) {
+    if (!mounted || !size.height.isFinite) {
+      return;
+    }
+
+    final nextHeight = math.max(0.0, size.height).roundToDouble();
+    _syncSnapPoints(nextHeight > 0 ? [nextHeight] : const []);
+  }
+
   List<double> _resolveSnapPoints(double availableHeight) {
     final points =
-        widget.snapSizes
+        widget.snapSizes!
             .map(
               (size) =>
                   (size.clamp(0.0, 1.0) * availableHeight).roundToDouble(),
@@ -522,38 +522,47 @@ class _SpringBottomSheetState extends State<SpringBottomSheet>
           0.0,
           constraints.maxHeight - topPadding - widget.maxTopGap,
         );
-        final snapPoints = _resolveSnapPoints(availableHeight);
+        final usesAutoSnapSize = widget.snapSizes == null;
 
-        _syncSnapPoints(snapPoints);
+        if (!usesAutoSnapSize) {
+          _syncSnapPoints(_resolveSnapPoints(availableHeight));
+        }
+
+        final sheetSurface = _SheetSurface(
+          backgroundColor: widget.backgroundColor,
+          borderRadius: widget.borderRadius,
+          clipBehavior: widget.clipBehavior,
+          contentScrollController: widget.enableContentDrag
+              ? _contentScrollController
+              : null,
+          elevation: widget.elevation,
+          enableDrag: widget.enableDrag,
+          expandBody: !usesAutoSnapSize,
+          header: widget.header,
+          onSizeChanged: usesAutoSnapSize
+              ? _handleAutoSurfaceSizeChanged
+              : null,
+          primaryScrollPlatforms: _allTargetPlatforms,
+          onVerticalDragCancel: _handleDragCancel,
+          onVerticalDragEnd: _handleDragEnd,
+          onVerticalDragStart: _handleDragStart,
+          onVerticalDragUpdate: _handleDragUpdate,
+          shadowColor: widget.shadowColor,
+          showDragHandle: widget.showDragHandle,
+          child: widget.child,
+        );
 
         return AnimatedBuilder(
           animation: _heightController,
           // _SheetSurface is passed as child so it is built once per
           // LayoutBuilder rebuild, not on every animation tick.
-          child: _SheetSurface(
-            backgroundColor: widget.backgroundColor,
-            borderRadius: widget.borderRadius,
-            clipBehavior: widget.clipBehavior,
-            contentScrollController: widget.enableContentDrag
-                ? _contentScrollController
-                : null,
-            elevation: widget.elevation,
-            enableDrag: widget.enableDrag,
-            header: widget.header,
-            primaryScrollPlatforms: _allTargetPlatforms,
-            onVerticalDragCancel: _handleDragCancel,
-            onVerticalDragEnd: _handleDragEnd,
-            onVerticalDragStart: _handleDragStart,
-            onVerticalDragUpdate: _handleDragUpdate,
-            shadowColor: widget.shadowColor,
-            showDragHandle: widget.showDragHandle,
-            child: widget.child,
-          ),
+          child: sheetSurface,
           builder: (context, sheetSurface) {
-            final maxSnap = snapPoints.last;
+            final maxSnap = _snapPoints.isEmpty ? 0.0 : _maxSnap;
             final rawHeight = _heightController.value;
             final sheetHeight = rawHeight.clamp(0.0, availableHeight);
             final surfaceHeight = math.max(maxSnap, sheetHeight);
+            final autoSurfaceHeight = availableHeight;
             final progress = maxSnap == 0
                 ? 0.0
                 : (sheetHeight / maxSnap).clamp(0.0, 1.0);
@@ -576,16 +585,28 @@ class _SpringBottomSheetState extends State<SpringBottomSheet>
                       child: ColoredBox(color: backdropColor),
                     ),
                   ),
-                  Positioned(
-                    left: 0,
-                    right: 0,
-                    bottom: 0,
-                    height: surfaceHeight,
-                    child: Transform.translate(
-                      offset: Offset(0, surfaceHeight - sheetHeight),
-                      child: sheetSurface,
+                  if (usesAutoSnapSize)
+                    Positioned(
+                      left: 0,
+                      right: 0,
+                      bottom: 0,
+                      height: autoSurfaceHeight,
+                      child: Transform.translate(
+                        offset: Offset(0, autoSurfaceHeight - sheetHeight),
+                        child: sheetSurface,
+                      ),
+                    )
+                  else
+                    Positioned(
+                      left: 0,
+                      right: 0,
+                      bottom: 0,
+                      height: surfaceHeight,
+                      child: Transform.translate(
+                        offset: Offset(0, surfaceHeight - sheetHeight),
+                        child: sheetSurface,
+                      ),
                     ),
-                  ),
                 ],
               ),
             );
@@ -605,7 +626,9 @@ class _SheetSurface extends StatelessWidget {
     required this.contentScrollController,
     required this.elevation,
     required this.enableDrag,
+    required this.expandBody,
     required this.header,
+    required this.onSizeChanged,
     required this.onVerticalDragCancel,
     required this.onVerticalDragEnd,
     required this.onVerticalDragStart,
@@ -622,7 +645,9 @@ class _SheetSurface extends StatelessWidget {
   final ScrollController? contentScrollController;
   final double elevation;
   final bool enableDrag;
+  final bool expandBody;
   final Widget? header;
+  final ValueChanged<Size>? onSizeChanged;
   final GestureDragCancelCallback onVerticalDragCancel;
   final GestureDragEndCallback onVerticalDragEnd;
   final GestureDragStartCallback onVerticalDragStart;
@@ -633,40 +658,60 @@ class _SheetSurface extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Material(
+    Widget content = Column(
+      mainAxisSize: expandBody ? MainAxisSize.max : MainAxisSize.min,
+      children: [
+        Column(
+          children: [
+            if (showDragHandle) ...[
+              const SizedBox(height: 10),
+              Container(
+                width: 44,
+                height: 5,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFCBD5E1),
+                  borderRadius: BorderRadius.circular(999),
+                ),
+              ),
+            ],
+            ?header,
+          ],
+        ),
+        if (expandBody)
+          Expanded(child: _buildBody())
+        else
+          Flexible(fit: FlexFit.loose, child: _buildBody()),
+      ],
+    );
+
+    final onSizeChanged = this.onSizeChanged;
+    if (!expandBody) {
+      if (onSizeChanged != null) {
+        content = _MeasureSize(onChange: onSizeChanged, child: content);
+      }
+
+      content = Align(alignment: Alignment.topCenter, child: content);
+    }
+
+    final surface = Material(
       clipBehavior: clipBehavior,
       color: backgroundColor,
       elevation: elevation,
       shadowColor: shadowColor,
       shape: RoundedRectangleBorder(borderRadius: borderRadius),
-      child: Column(
-        children: [
-          GestureDetector(
-            behavior: HitTestBehavior.opaque,
-            onVerticalDragCancel: enableDrag ? onVerticalDragCancel : null,
-            onVerticalDragEnd: enableDrag ? onVerticalDragEnd : null,
-            onVerticalDragStart: enableDrag ? onVerticalDragStart : null,
-            onVerticalDragUpdate: enableDrag ? onVerticalDragUpdate : null,
-            child: Column(
-              children: [
-                if (showDragHandle) ...[
-                  const SizedBox(height: 10),
-                  Container(
-                    width: 44,
-                    height: 5,
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFCBD5E1),
-                      borderRadius: BorderRadius.circular(999),
-                    ),
-                  ),
-                ],
-                ?header,
-              ],
-            ),
-          ),
-          Expanded(child: _buildBody()),
-        ],
-      ),
+      child: content,
+    );
+
+    if (!enableDrag) {
+      return surface;
+    }
+
+    return _SheetDragDetector(
+      onVerticalDragCancel: onVerticalDragCancel,
+      onVerticalDragEnd: onVerticalDragEnd,
+      onVerticalDragStart: onVerticalDragStart,
+      onVerticalDragUpdate: onVerticalDragUpdate,
+      child: surface,
     );
   }
 
@@ -687,36 +732,123 @@ class _SheetSurface extends StatelessWidget {
   }
 }
 
+class _SheetDragDetector extends StatelessWidget {
+  const _SheetDragDetector({
+    required this.child,
+    required this.onVerticalDragCancel,
+    required this.onVerticalDragEnd,
+    required this.onVerticalDragStart,
+    required this.onVerticalDragUpdate,
+  });
+
+  final Widget child;
+  final GestureDragCancelCallback onVerticalDragCancel;
+  final GestureDragEndCallback onVerticalDragEnd;
+  final GestureDragStartCallback onVerticalDragStart;
+  final GestureDragUpdateCallback onVerticalDragUpdate;
+
+  @override
+  Widget build(BuildContext context) {
+    return RawGestureDetector(
+      behavior: HitTestBehavior.opaque,
+      excludeFromSemantics: true,
+      gestures: <Type, GestureRecognizerFactory<GestureRecognizer>>{
+        VerticalDragGestureRecognizer:
+            GestureRecognizerFactoryWithHandlers<VerticalDragGestureRecognizer>(
+              () => VerticalDragGestureRecognizer(debugOwner: this),
+              (instance) {
+                instance
+                  ..onCancel = onVerticalDragCancel
+                  ..onEnd = onVerticalDragEnd
+                  ..onStart = onVerticalDragStart
+                  ..onUpdate = onVerticalDragUpdate
+                  ..onlyAcceptDragOnThreshold = true;
+              },
+            ),
+      },
+      child: child,
+    );
+  }
+}
+
+class _MeasureSize extends SingleChildRenderObjectWidget {
+  const _MeasureSize({required this.onChange, required super.child});
+
+  final ValueChanged<Size> onChange;
+
+  @override
+  RenderObject createRenderObject(BuildContext context) {
+    return _MeasureSizeRenderObject(onChange);
+  }
+
+  @override
+  void updateRenderObject(
+    BuildContext context,
+    _MeasureSizeRenderObject renderObject,
+  ) {
+    renderObject.onChange = onChange;
+  }
+}
+
+class _MeasureSizeRenderObject extends RenderProxyBox {
+  _MeasureSizeRenderObject(this._onChange);
+
+  ValueChanged<Size> _onChange;
+  Size? _oldSize;
+
+  set onChange(ValueChanged<Size> value) {
+    _onChange = value;
+  }
+
+  @override
+  void performLayout() {
+    super.performLayout();
+
+    final newSize = size;
+    if (_oldSize == newSize) {
+      return;
+    }
+
+    _oldSize = newSize;
+    _onChange(newSize);
+  }
+}
+
 class _SpringBottomSheetScrollCoordinator {
   _SpringBottomSheetScrollCoordinator(this._state);
 
   final _SpringBottomSheetState _state;
-  bool _changedSheetDuringDrag = false;
+  bool _isResizingSheet = false;
 
-  bool shouldResize(double userOffsetDelta) {
-    return _state._shouldResizeFromContentDrag(userOffsetDelta);
+  bool shouldResize(double userOffsetDelta, {required bool listCanScroll}) {
+    if (_isResizingSheet) {
+      return true;
+    }
+
+    final shouldResize = _state._shouldResizeFromContentDrag(
+      userOffsetDelta,
+      listCanScroll: listCanScroll,
+    );
+    if (shouldResize) {
+      _isResizingSheet = true;
+      _state._beginDrag();
+    }
+    return shouldResize;
   }
 
-  void applyHeightDelta(double heightDelta) {
-    _changedSheetDuringDrag = true;
-    _state._applyContentDragDelta(heightDelta);
+  void applyUserOffset(double userOffsetDelta) {
+    _state._updateDrag(userOffsetDelta);
   }
 
-  bool shouldSettle(double velocity, {required bool listShouldScroll}) {
-    return _changedSheetDuringDrag &&
-        _state._shouldSettleContentDrag(
-          velocity,
-          listShouldScroll: listShouldScroll,
-        );
-  }
+  bool get shouldSettle => _isResizingSheet;
 
   void settle(double velocity) {
-    _changedSheetDuringDrag = false;
+    _isResizingSheet = false;
     _state._settleDrag(velocity: velocity);
   }
 
   void forgetDrag() {
-    _changedSheetDuringDrag = false;
+    _isResizingSheet = false;
   }
 }
 
@@ -751,12 +883,26 @@ class _SpringBottomSheetScrollPosition extends ScrollPositionWithSingleContext {
   final _SpringBottomSheetScrollCoordinator coordinator;
   VoidCallback? _dragCancelCallback;
 
-  bool get _listShouldScroll => pixels > minScrollExtent;
+  bool get _isScrolledAwayFromTop => pixels > minScrollExtent;
+
+  bool _canScrollInDragDirection(double userOffsetDelta) {
+    if (userOffsetDelta < 0) {
+      return pixels < maxScrollExtent;
+    }
+
+    if (userOffsetDelta > 0) {
+      return pixels > minScrollExtent;
+    }
+
+    return false;
+  }
 
   @override
   void applyUserOffset(double delta) {
-    if (!_listShouldScroll && coordinator.shouldResize(delta)) {
-      coordinator.applyHeightDelta(-delta);
+    final listCanScroll = _canScrollInDragDirection(delta);
+    if (!_isScrolledAwayFromTop &&
+        coordinator.shouldResize(delta, listCanScroll: listCanScroll)) {
+      coordinator.applyUserOffset(delta);
       return;
     }
 
@@ -765,10 +911,7 @@ class _SpringBottomSheetScrollPosition extends ScrollPositionWithSingleContext {
 
   @override
   void goBallistic(double velocity) {
-    if (!coordinator.shouldSettle(
-      velocity,
-      listShouldScroll: _listShouldScroll,
-    )) {
+    if (!coordinator.shouldSettle) {
       coordinator.forgetDrag();
       super.goBallistic(velocity);
       return;

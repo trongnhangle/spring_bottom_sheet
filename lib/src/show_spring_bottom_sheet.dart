@@ -30,7 +30,7 @@ Future<T?> showSpringBottomSheet<T>({
   double rubberBandConstant = 0.55,
   Color shadowColor = const Color(0x33111827),
   bool showDragHandle = true,
-  List<double> snapSizes = const [0.35, 0.65, 0.92],
+  List<double>? snapSizes,
   SpringDescription spring = const SpringDescription(
     mass: 1,
     stiffness: 210,
@@ -111,7 +111,7 @@ class _SheetConfig {
   final double rubberBandConstant;
   final Color shadowColor;
   final bool showDragHandle;
-  final List<double> snapSizes;
+  final List<double>? snapSizes;
   final SpringDescription spring;
   final Tolerance springTolerance;
 }

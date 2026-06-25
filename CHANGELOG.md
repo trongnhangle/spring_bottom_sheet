@@ -1,3 +1,42 @@
+## 1.0.1
+
+### Added
+
+- Added content-height sizing as the default behavior. When `snapSizes` is
+  omitted, the sheet measures its rendered content and uses that height as a
+  single snap point.
+- Added automatic remeasurement when dynamic content changes size.
+- Added content-sized support to `SpringStaggeredListView` through coordinated
+  scroll-controller inheritance.
+
+### Improved
+
+- Capped content-sized sheets at the available viewport height so long content
+  remains scrollable.
+- Unified header, handle, body, and scrollable-body dragging so they use the
+  same delta accumulation, rubber-band curve, velocity, and spring settling.
+- Kept each gesture in one interaction mode: a gesture that starts by resizing
+  the sheet finishes resizing it before a later gesture scrolls the content.
+- Reduced auto-sizing overhead by measuring content during render layout
+  without an additional `setState` and rebuild cycle.
+- Expanded drag handling from the header area to the full sheet surface.
+
+### Fixed
+
+- Fixed scroll handoff at the largest snap point and when returning to the top
+  of scrollable content.
+- Fixed `SpringStaggeredListView` ignoring an explicit `primary: false`.
+- Fixed switching between custom `snapSizes` and content-height sizing.
+
+### Migration note
+
+`snapSizes` now defaults to `null` instead of `[0.35, 0.65, 0.92]`. To preserve
+the previous three-snap behavior, pass it explicitly:
+
+```dart
+snapSizes: const [0.35, 0.65, 0.92],
+```
+
 ## 1.0.0
 
 This is a **complete rewrite** of the package. The public API is not

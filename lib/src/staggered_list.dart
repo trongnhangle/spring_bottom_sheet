@@ -2,6 +2,8 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 
+import 'spring_bottom_sheet.dart';
+
 /// A small dependency-free staggered list that fades and slides every direct
 /// child from the bottom.
 class SpringStaggeredListView extends StatelessWidget {
@@ -46,13 +48,17 @@ class SpringStaggeredListView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final inheritedController = controller == null && primary == null
+        ? SpringBottomSheetScrollController.maybeOf(context)
+        : null;
+
     return ListView(
       clipBehavior: clipBehavior,
-      controller: controller,
+      controller: controller ?? inheritedController,
       keyboardDismissBehavior: keyboardDismissBehavior,
       padding: padding,
       physics: physics,
-      primary: primary,
+      primary: inheritedController == null ? primary : false,
       reverse: reverse,
       shrinkWrap: shrinkWrap,
       children: [
