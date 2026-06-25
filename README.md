@@ -104,13 +104,13 @@ showSpringBottomSheet<void>(
 );
 ```
 
-If the content grows after the sheet opens, its snap height is measured again
-and the sheet animates to the new size.
+If the content changes after the sheet opens, the sheet tracks its latest
+rendered height without starting a new spring on every layout frame.
 
 ### Content-sized scroll views
 
-A regular `ListView` expands to the maximum available height. To size a short
-list to its content, use `shrinkWrap: true`:
+A regular `ListView` expands to the maximum available height. For a short,
+finite menu, use `shrinkWrap: true` to size the sheet to the list content:
 
 ```dart
 showSpringBottomSheet<void>(
@@ -129,8 +129,11 @@ showSpringBottomSheet<void>(
 );
 ```
 
-Long scrollable content is automatically capped by the available viewport and
-continues scrolling inside the sheet.
+Keep `shrinkWrap: false` (the default) for long or lazily-built lists.
+Shrink-wrapping requires Flutter to recompute the scroll view's extent as it
+scrolls and is significantly more expensive for large collections. Long
+content is automatically capped by the available viewport and continues
+scrolling inside the sheet.
 
 ## Custom snap points
 

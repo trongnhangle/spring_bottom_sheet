@@ -6,6 +6,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/physics.dart';
 import 'package:flutter/rendering.dart';
 
+enum _SheetMotion { idle, opening, dragging, snapping, dismissing }
+
 /// Controls a [SpringBottomSheet] without exposing a [GlobalKey].
 class SpringBottomSheetController {
   _SpringBottomSheetState? _state;
@@ -196,6 +198,12 @@ class _SpringBottomSheetState extends State<SpringBottomSheet>
   List<double> _snapPoints = const [];
   double _dragStartHeight = 0;
   double _dragOffset = 0;
+  double? _pendingAutoHeight;
+  Future<void>? _dismissFuture;
+  _SheetMotion _motion = _SheetMotion.idle;
+  bool _autoSizeUpdateScheduled = false;
+  bool _dismissNotified = false;
+  int _animationGeneration = 0;
   int _layoutVersion = 0;
 
   double get _minSnap => _snapPoints.first;
@@ -221,17 +229,47 @@ class _SpringBottomSheetState extends State<SpringBottomSheet>
       widget.controller?._attach(this);
     }
 
-    if (oldWidget.open != widget.open && _snapPoints.isNotEmpty) {
+    if ((oldWidget.snapSizes == null) != (widget.snapSizes == null)) {
+      _pendingAutoHeight = null;
+      _layoutVersion++;
+    }
+
+    if (oldWidget.open != widget.open) {
       if (widget.open) {
-        // Defer by one frame so build() has updated _snapPoints via
-        // _syncSnapPoints before the animation target is resolved.
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (mounted && widget.open) {
-            unawaited(snapToIndex(widget.initialSnapIndex));
-          }
-        });
+        _dismissNotified = false;
+        if (_motion == _SheetMotion.dismissing && _dismissFuture == null) {
+          _animationGeneration++;
+          _heightController.stop();
+          _motion = _SheetMotion.idle;
+        }
+        if (_snapPoints.isNotEmpty) {
+          // Defer by one frame so build() has updated _snapPoints via
+          // _syncSnapPoints before the animation target is resolved.
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (mounted && widget.open && _snapPoints.isNotEmpty) {
+              unawaited(
+                _animateTo(
+                  _snapPoints[widget.initialSnapIndex
+                      .clamp(0, _snapPoints.length - 1)
+                      .toInt()],
+                  velocity: 0,
+                  motion: _SheetMotion.opening,
+                ),
+              );
+            }
+          });
+        }
       } else {
-        unawaited(_animateTo(0, velocity: 0));
+        if (_heightController.value <= 0.6) {
+          _animationGeneration++;
+          _heightController.stop();
+          _heightController.value = 0;
+          _motion = _SheetMotion.idle;
+        } else {
+          unawaited(
+            _animateTo(0, velocity: 0, motion: _SheetMotion.dismissing),
+          );
+        }
       }
     }
   }
@@ -245,43 +283,89 @@ class _SpringBottomSheetState extends State<SpringBottomSheet>
   }
 
   Future<void> snapToIndex(int index, {double velocity = 0}) async {
-    if (_snapPoints.isEmpty) {
+    if (_snapPoints.isEmpty || _motion == _SheetMotion.dismissing) {
       return;
     }
 
     final safeIndex = index.clamp(0, _snapPoints.length - 1).toInt();
-    await _animateTo(_snapPoints[safeIndex], velocity: velocity);
+    await _animateTo(
+      _snapPoints[safeIndex],
+      velocity: velocity,
+      motion: _SheetMotion.snapping,
+    );
   }
 
   Future<void> snapToNearest({double velocity = 0}) async {
-    if (_snapPoints.isEmpty) {
+    if (_snapPoints.isEmpty || _motion == _SheetMotion.dismissing) {
       return;
     }
 
     final projected = _heightController.value + (velocity * 0.16);
-    await _animateTo(_nearestSnap(projected), velocity: velocity);
+    await _animateTo(
+      _nearestSnap(projected),
+      velocity: velocity,
+      motion: _SheetMotion.snapping,
+    );
   }
 
-  Future<void> dismiss({double velocity = 0}) async {
+  Future<void> dismiss({double velocity = 0}) {
     if (widget.onDismissed == null) {
-      return;
+      return Future<void>.value();
     }
 
-    await _animateTo(0, velocity: velocity);
+    final activeDismiss = _dismissFuture;
+    if (activeDismiss != null) {
+      return activeDismiss;
+    }
 
-    if (mounted) {
+    late final Future<void> operation;
+    operation = _runDismiss(velocity).whenComplete(() {
+      if (identical(_dismissFuture, operation)) {
+        _dismissFuture = null;
+      }
+    });
+    _dismissFuture = operation;
+    return operation;
+  }
+
+  Future<void> _runDismiss(double velocity) async {
+    final completed = await _animateTo(
+      0,
+      velocity: velocity,
+      motion: _SheetMotion.dismissing,
+    );
+
+    if (completed && mounted && !_dismissNotified) {
+      _dismissNotified = true;
       widget.onDismissed?.call();
     }
   }
 
-  Future<void> _animateTo(double target, {required double velocity}) async {
+  Future<bool> _animateTo(
+    double target, {
+    required double velocity,
+    required _SheetMotion motion,
+  }) async {
     if (_snapPoints.isEmpty && target != 0) {
-      return;
+      return false;
+    }
+
+    if (_motion == _SheetMotion.dismissing &&
+        motion != _SheetMotion.dismissing) {
+      return false;
     }
 
     final safeTarget = target == 0 ? 0.0 : target.clamp(_minSnap, _maxSnap);
-
+    final generation = ++_animationGeneration;
     _heightController.stop();
+
+    if ((_heightController.value - safeTarget).abs() <= 0.1) {
+      _heightController.value = safeTarget;
+      _motion = _SheetMotion.idle;
+      return true;
+    }
+
+    _motion = motion;
 
     final simulation = SpringSimulation(
       widget.spring,
@@ -291,7 +375,33 @@ class _SpringBottomSheetState extends State<SpringBottomSheet>
       tolerance: widget.springTolerance,
     );
 
-    await _heightController.animateWith(simulation);
+    try {
+      await _heightController.animateWith(simulation).orCancel;
+    } on TickerCanceled {
+      return false;
+    }
+
+    if (!mounted || generation != _animationGeneration) {
+      return false;
+    }
+
+    final completed =
+        (_heightController.value - safeTarget).abs() <=
+        math.max(0.6, widget.springTolerance.distance);
+    _motion = _SheetMotion.idle;
+
+    if (completed) {
+      final settledTarget =
+          motion != _SheetMotion.dismissing &&
+              widget.open &&
+              widget.snapSizes == null &&
+              _snapPoints.isNotEmpty
+          ? _maxSnap
+          : safeTarget;
+      _heightController.value = settledTarget;
+    }
+
+    return completed;
   }
 
   void _handleDragStart(DragStartDetails details) {
@@ -299,11 +409,13 @@ class _SpringBottomSheetState extends State<SpringBottomSheet>
   }
 
   void _beginDrag() {
-    if (_snapPoints.isEmpty) {
+    if (_snapPoints.isEmpty || _motion == _SheetMotion.dismissing) {
       return;
     }
 
+    _animationGeneration++;
     _heightController.stop();
+    _motion = _SheetMotion.dragging;
     _dragStartHeight = _heightController.value;
     _dragOffset = 0;
   }
@@ -313,7 +425,7 @@ class _SpringBottomSheetState extends State<SpringBottomSheet>
   }
 
   void _updateDrag(double userOffsetDelta) {
-    if (_snapPoints.isEmpty) {
+    if (_snapPoints.isEmpty || _motion != _SheetMotion.dragging) {
       return;
     }
 
@@ -359,7 +471,13 @@ class _SpringBottomSheetState extends State<SpringBottomSheet>
       return;
     }
 
-    unawaited(_animateTo(_nearestSnap(projected), velocity: velocity));
+    unawaited(
+      _animateTo(
+        _nearestSnap(projected),
+        velocity: velocity,
+        motion: _SheetMotion.snapping,
+      ),
+    );
   }
 
   bool _shouldResizeFromContentDrag(
@@ -396,7 +514,9 @@ class _SpringBottomSheetState extends State<SpringBottomSheet>
   }
 
   void _handleDragCancel() {
-    unawaited(snapToNearest());
+    if (_motion == _SheetMotion.dragging) {
+      unawaited(snapToNearest());
+    }
   }
 
   void _syncSnapPoints(List<double> nextSnapPoints) {
@@ -411,8 +531,13 @@ class _SpringBottomSheetState extends State<SpringBottomSheet>
 
       if (previousHeight > 0.6) {
         WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (mounted && version == _layoutVersion) {
-            unawaited(_animateTo(0, velocity: 0));
+          if (mounted &&
+              version == _layoutVersion &&
+              _motion != _SheetMotion.dragging &&
+              _motion != _SheetMotion.dismissing) {
+            unawaited(
+              _animateTo(0, velocity: 0, motion: _SheetMotion.snapping),
+            );
           }
         });
       }
@@ -431,28 +556,108 @@ class _SpringBottomSheetState extends State<SpringBottomSheet>
 
       if (!widget.open) {
         _heightController.value = 0;
+        _motion = _SheetMotion.idle;
+        return;
+      }
+
+      if (_motion == _SheetMotion.dragging ||
+          _motion == _SheetMotion.dismissing) {
         return;
       }
 
       if (wasEmpty || previousHeight <= 0.6) {
-        unawaited(snapToIndex(widget.initialSnapIndex));
+        final safeIndex = widget.initialSnapIndex
+            .clamp(0, _snapPoints.length - 1)
+            .toInt();
+        unawaited(
+          _animateTo(
+            _snapPoints[safeIndex],
+            velocity: 0,
+            motion: _SheetMotion.opening,
+          ),
+        );
         return;
       }
 
       final target = _nearestSnap(previousHeight);
       if ((target - previousHeight).abs() > 0.6) {
-        unawaited(_animateTo(target, velocity: 0));
+        unawaited(
+          _animateTo(target, velocity: 0, motion: _SheetMotion.snapping),
+        );
       }
     });
   }
 
   void _handleAutoSurfaceSizeChanged(Size size) {
-    if (!mounted || !size.height.isFinite) {
+    if (!mounted || widget.snapSizes != null || !size.height.isFinite) {
       return;
     }
 
-    final nextHeight = math.max(0.0, size.height).roundToDouble();
-    _syncSnapPoints(nextHeight > 0 ? [nextHeight] : const []);
+    _pendingAutoHeight = math.max(0.0, size.height);
+    if (_autoSizeUpdateScheduled) {
+      return;
+    }
+
+    _autoSizeUpdateScheduled = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _autoSizeUpdateScheduled = false;
+      if (!mounted || widget.snapSizes != null) {
+        _pendingAutoHeight = null;
+        return;
+      }
+
+      final nextHeight = _pendingAutoHeight;
+      _pendingAutoHeight = null;
+      if (nextHeight != null) {
+        _applyAutoHeight(nextHeight);
+      }
+    });
+  }
+
+  void _applyAutoHeight(double nextHeight) {
+    final nextSnapPoints = nextHeight > 0 ? [nextHeight] : const <double>[];
+    if (_sameSnapPoints(_snapPoints, nextSnapPoints)) {
+      return;
+    }
+
+    final wasEmpty = _snapPoints.isEmpty;
+    final previousHeight = _heightController.value;
+    _snapPoints = nextSnapPoints;
+    _layoutVersion++;
+
+    if (!widget.open) {
+      _heightController.value = 0;
+      _motion = _SheetMotion.idle;
+      return;
+    }
+
+    if (_snapPoints.isEmpty) {
+      if (_motion == _SheetMotion.idle) {
+        _heightController.value = 0;
+      }
+      return;
+    }
+
+    if (wasEmpty || previousHeight <= 0.6) {
+      if (_motion != _SheetMotion.dismissing) {
+        unawaited(
+          _animateTo(_maxSnap, velocity: 0, motion: _SheetMotion.opening),
+        );
+      }
+      return;
+    }
+
+    // During a gesture or spring, only update the destination/bounds. The
+    // active interaction keeps control of the visible height and aligns with
+    // the latest auto snap when it finishes.
+    if (_motion != _SheetMotion.idle) {
+      return;
+    }
+
+    // Flutter's standard bottom sheet follows its laid-out child directly.
+    // Updating the unbounded controller here repaints/repositions the surface
+    // without creating a new spring for every content-size animation frame.
+    _heightController.value = _maxSnap;
   }
 
   List<double> _resolveSnapPoints(double availableHeight) {
@@ -488,7 +693,7 @@ class _SpringBottomSheetState extends State<SpringBottomSheet>
     }
 
     for (var i = 0; i < a.length; i++) {
-      if ((a[i] - b[i]).abs() > 0.1) {
+      if (a[i] != b[i]) {
         return false;
       }
     }
@@ -573,7 +778,8 @@ class _SpringBottomSheetState extends State<SpringBottomSheet>
             )!;
 
             return IgnorePointer(
-              ignoring: sheetHeight <= 0.6,
+              ignoring:
+                  sheetHeight <= 0.6 || _motion == _SheetMotion.dismissing,
               child: Stack(
                 children: [
                   Positioned.fill(

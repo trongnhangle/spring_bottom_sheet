@@ -350,6 +350,7 @@ void main() {
     addTearDown(tester.view.resetPhysicalSize);
 
     final controller = SpringBottomSheetController();
+    var builtItemCount = 0;
 
     await tester.pumpWidget(
       MaterialApp(
@@ -362,9 +363,14 @@ void main() {
                 open: true,
                 showDragHandle: false,
                 child: ListView.builder(
-                  itemCount: 40,
-                  itemBuilder: (context, index) =>
-                      SizedBox(height: 56, child: Text('Long item $index')),
+                  itemCount: 500,
+                  itemBuilder: (context, index) {
+                    builtItemCount++;
+                    return SizedBox(
+                      height: 56,
+                      child: Text('Long item $index'),
+                    );
+                  },
                 ),
               ),
             ],
@@ -393,6 +399,7 @@ void main() {
 
     expect(scrollable.position.pixels, greaterThan(0));
     expect(controller.height, closeTo(786, 2));
+    expect(builtItemCount, lessThan(500));
   });
 
   testWidgets('package list respects an explicit primary false', (
@@ -484,6 +491,338 @@ void main() {
     await tester.pump(const Duration(milliseconds: 700));
 
     expect(controller.height, closeTo(288, 2));
+  });
+
+  testWidgets('interrupted controller animations complete their futures', (
+    tester,
+  ) async {
+    tester.view.devicePixelRatio = 1;
+    tester.view.physicalSize = const Size(400, 800);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    addTearDown(tester.view.resetPhysicalSize);
+
+    final controller = SpringBottomSheetController();
+
+    await tester.pumpWidget(
+      _Harness(
+        controller: controller,
+        initialSnapIndex: 0,
+        open: true,
+        child: ListView.builder(
+          itemCount: 40,
+          itemBuilder: (context, index) =>
+              SizedBox(height: 56, child: Text('Interrupt item $index')),
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 700));
+
+    var completed = false;
+    unawaited(
+      controller.snapToIndex(2).then((_) {
+        completed = true;
+      }),
+    );
+    await tester.pump(const Duration(milliseconds: 32));
+
+    final drag = await tester.startGesture(
+      tester.getCenter(find.text('Header')),
+    );
+    await drag.moveBy(const Offset(0, 40));
+    await tester.pump();
+    await tester.pump();
+
+    expect(completed, isTrue);
+
+    await drag.up();
+  });
+
+  testWidgets('content size changes cannot interrupt dismissal', (
+    tester,
+  ) async {
+    tester.view.devicePixelRatio = 1;
+    tester.view.physicalSize = const Size(400, 800);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    addTearDown(tester.view.resetPhysicalSize);
+
+    final controller = SpringBottomSheetController();
+    late StateSetter setHarnessState;
+    var bodyHeight = 120.0;
+    var dismissCount = 0;
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: StatefulBuilder(
+          builder: (context, setState) {
+            setHarnessState = setState;
+            return Scaffold(
+              body: Stack(
+                children: [
+                  SpringBottomSheet(
+                    controller: controller,
+                    onDismissed: () {
+                      dismissCount++;
+                    },
+                    open: true,
+                    showDragHandle: false,
+                    child: SizedBox(
+                      height: bodyHeight,
+                      child: const Text('Dismiss body'),
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 700));
+
+    var dismissCompleted = false;
+    unawaited(
+      controller.dismiss().then((_) {
+        dismissCompleted = true;
+      }),
+    );
+    await tester.pump(const Duration(milliseconds: 32));
+
+    setHarnessState(() {
+      bodyHeight = 260;
+    });
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 16));
+    await tester.pumpAndSettle(
+      const Duration(milliseconds: 16),
+      EnginePhase.sendSemanticsUpdate,
+      const Duration(seconds: 3),
+    );
+
+    expect(dismissCompleted, isTrue);
+    expect(dismissCount, 1);
+    expect(controller.height, closeTo(0, 0.1));
+  });
+
+  testWidgets('dismiss at the start of opening cancels the opening spring', (
+    tester,
+  ) async {
+    tester.view.devicePixelRatio = 1;
+    tester.view.physicalSize = const Size(400, 800);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    addTearDown(tester.view.resetPhysicalSize);
+
+    final controller = SpringBottomSheetController();
+    var dismissCount = 0;
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: Stack(
+            children: [
+              SpringBottomSheet(
+                controller: controller,
+                onDismissed: () {
+                  dismissCount++;
+                },
+                open: true,
+                showDragHandle: false,
+                child: const SizedBox(height: 180),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+    await tester.pump(const Duration(milliseconds: 16));
+
+    unawaited(controller.dismiss());
+    await tester.pumpAndSettle(
+      const Duration(milliseconds: 16),
+      EnginePhase.sendSemanticsUpdate,
+      const Duration(seconds: 3),
+    );
+
+    expect(dismissCount, 1);
+    expect(controller.height, 0);
+  });
+
+  testWidgets('auto size updates bounds without moving an active drag', (
+    tester,
+  ) async {
+    tester.view.devicePixelRatio = 1;
+    tester.view.physicalSize = const Size(400, 800);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    addTearDown(tester.view.resetPhysicalSize);
+
+    final controller = SpringBottomSheetController();
+    late StateSetter setHarnessState;
+    var bodyHeight = 160.0;
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: StatefulBuilder(
+          builder: (context, setState) {
+            setHarnessState = setState;
+            return Scaffold(
+              body: Stack(
+                children: [
+                  SpringBottomSheet(
+                    controller: controller,
+                    onDismissed: () {},
+                    open: true,
+                    showDragHandle: false,
+                    child: SizedBox(
+                      height: bodyHeight,
+                      child: const Text('Resizable drag body'),
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.pump();
+    await tester.pumpAndSettle(
+      const Duration(milliseconds: 16),
+      EnginePhase.sendSemanticsUpdate,
+      const Duration(seconds: 3),
+    );
+
+    final drag = await tester.startGesture(
+      tester.getCenter(find.text('Resizable drag body')),
+    );
+    await drag.moveBy(const Offset(0, 30));
+    await tester.pump();
+    final draggedHeight = controller.height;
+
+    setHarnessState(() {
+      bodyHeight = 260;
+    });
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 16));
+
+    expect(controller.height, closeTo(draggedHeight, 0.1));
+
+    await drag.up();
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 700));
+
+    expect(controller.height, closeTo(260, 1));
+  });
+
+  testWidgets('auto size follows AnimatedSize layout without spring lag', (
+    tester,
+  ) async {
+    tester.view.devicePixelRatio = 1;
+    tester.view.physicalSize = const Size(400, 800);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    addTearDown(tester.view.resetPhysicalSize);
+
+    final controller = SpringBottomSheetController();
+    final bodyKey = GlobalKey();
+    late StateSetter setHarnessState;
+    var expanded = false;
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: StatefulBuilder(
+          builder: (context, setState) {
+            setHarnessState = setState;
+            return Scaffold(
+              body: Stack(
+                children: [
+                  SpringBottomSheet(
+                    controller: controller,
+                    onDismissed: () {},
+                    open: true,
+                    showDragHandle: false,
+                    child: AnimatedSize(
+                      key: bodyKey,
+                      duration: const Duration(milliseconds: 300),
+                      alignment: Alignment.topCenter,
+                      child: SizedBox(
+                        height: expanded ? 300 : 120,
+                        child: const Text('Animated body'),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.pump();
+    await tester.pumpAndSettle(
+      const Duration(milliseconds: 16),
+      EnginePhase.sendSemanticsUpdate,
+      const Duration(seconds: 3),
+    );
+
+    setHarnessState(() {
+      expanded = true;
+    });
+    await tester.pump();
+
+    for (var i = 0; i < 10; i++) {
+      await tester.pump(const Duration(milliseconds: 16));
+      final renderedHeight = tester.getSize(find.byKey(bodyKey)).height;
+      expect(controller.height, closeTo(renderedHeight, 1));
+    }
+
+    await tester.pumpAndSettle(
+      const Duration(milliseconds: 16),
+      EnginePhase.sendSemanticsUpdate,
+      const Duration(seconds: 3),
+    );
+    expect(controller.height, closeTo(300, 1));
+  });
+
+  testWidgets('auto sizing preserves fractional logical pixels', (
+    tester,
+  ) async {
+    tester.view.devicePixelRatio = 2.5;
+    tester.view.physicalSize = const Size(1000, 2000);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    addTearDown(tester.view.resetPhysicalSize);
+
+    final controller = SpringBottomSheetController();
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: Stack(
+            children: [
+              SpringBottomSheet(
+                controller: controller,
+                header: const SizedBox(height: 47.3),
+                onDismissed: () {},
+                open: true,
+                showDragHandle: false,
+                child: const SizedBox(height: 120.4),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.pump();
+    await tester.pumpAndSettle(
+      const Duration(milliseconds: 16),
+      EnginePhase.sendSemanticsUpdate,
+      const Duration(seconds: 3),
+    );
+
+    expect(controller.height, closeTo(167.7, 0.01));
   });
 
   testWidgets('auto snap body drag rubber-bands in both directions', (
@@ -605,6 +944,67 @@ void main() {
     await tester.pump(const Duration(milliseconds: 700));
 
     expect(controller.height, closeTo(168, 2));
+  });
+
+  testWidgets('parent can reopen while a controlled close is in flight', (
+    tester,
+  ) async {
+    tester.view.devicePixelRatio = 1;
+    tester.view.physicalSize = const Size(400, 800);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    addTearDown(tester.view.resetPhysicalSize);
+
+    final controller = SpringBottomSheetController();
+    late StateSetter setHarnessState;
+    var open = true;
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: StatefulBuilder(
+          builder: (context, setState) {
+            setHarnessState = setState;
+            return Scaffold(
+              body: Stack(
+                children: [
+                  SpringBottomSheet(
+                    controller: controller,
+                    onDismissed: () {},
+                    open: open,
+                    showDragHandle: false,
+                    snapSizes: const [0.5],
+                    child: const SizedBox.expand(),
+                  ),
+                ],
+              ),
+            );
+          },
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.pumpAndSettle(
+      const Duration(milliseconds: 16),
+      EnginePhase.sendSemanticsUpdate,
+      const Duration(seconds: 3),
+    );
+
+    setHarnessState(() {
+      open = false;
+    });
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 32));
+
+    setHarnessState(() {
+      open = true;
+    });
+    await tester.pump();
+    await tester.pumpAndSettle(
+      const Duration(milliseconds: 16),
+      EnginePhase.sendSemanticsUpdate,
+      const Duration(seconds: 3),
+    );
+
+    expect(controller.height, closeTo(393, 1));
   });
 
   testWidgets('showSpringBottomSheet completes with Navigator.pop result', (
