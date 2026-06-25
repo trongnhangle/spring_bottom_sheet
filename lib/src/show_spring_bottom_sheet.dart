@@ -173,6 +173,12 @@ class _SpringBottomSheetRoute<T> extends PageRoute<T> {
   }
 
   @override
+  void didComplete(T? result) {
+    _completed = true;
+    super.didComplete(result);
+  }
+
+  @override
   Widget buildPage(
     BuildContext context,
     Animation<double> animation,

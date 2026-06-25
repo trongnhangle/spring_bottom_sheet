@@ -1128,6 +1128,66 @@ void main() {
     expect(showCount, 2);
     expect(find.text('Sheet 2'), findsOneWidget);
   });
+
+  testWidgets('navigator stack reset does not remove modal route twice', (
+    tester,
+  ) async {
+    var sheetCompleted = false;
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Builder(
+          builder: (context) {
+            return Scaffold(
+              body: FilledButton(
+                onPressed: () {
+                  unawaited(
+                    showSpringBottomSheet<void>(
+                      context: context,
+                      snapSizes: const [0.5],
+                      builder: (sheetContext) {
+                        return Center(
+                          child: FilledButton(
+                            onPressed: () {
+                              Navigator.of(sheetContext).pushAndRemoveUntil(
+                                MaterialPageRoute<void>(
+                                  builder: (_) =>
+                                      const Scaffold(body: Text('Next page')),
+                                ),
+                                (_) => false,
+                              );
+                            },
+                            child: const Text('Reset stack'),
+                          ),
+                        );
+                      },
+                    ).then((_) => sheetCompleted = true),
+                  );
+                },
+                child: const Text('Show sheet'),
+              ),
+            );
+          },
+        ),
+      ),
+    );
+
+    await tester.tap(find.text('Show sheet'));
+    await tester.pump();
+    await tester.pumpAndSettle(
+      const Duration(milliseconds: 16),
+      EnginePhase.sendSemanticsUpdate,
+      const Duration(seconds: 3),
+    );
+
+    await tester.tap(find.text('Reset stack'));
+    await tester.pumpAndSettle();
+
+    expect(tester.takeException(), isNull);
+    expect(sheetCompleted, isTrue);
+    expect(find.text('Next page'), findsOneWidget);
+    expect(find.text('Reset stack'), findsNothing);
+  });
 }
 
 class _Harness extends StatelessWidget {
