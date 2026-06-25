@@ -1070,6 +1070,64 @@ void main() {
     expect(result, 'done');
     expect(find.text('Return result'), findsNothing);
   });
+
+  testWidgets('modal sheet can reopen as soon as dismissal starts', (
+    tester,
+  ) async {
+    var showCount = 0;
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Builder(
+          builder: (context) {
+            void showSheet() {
+              showCount++;
+              final sheetNumber = showCount;
+              showSpringBottomSheet<void>(
+                context: context,
+                snapSizes: const [0.5],
+                headerBuilder: (context) => FilledButton(
+                  key: const ValueKey('close-sheet'),
+                  onPressed: () => Navigator.of(context).pop(),
+                  child: const Text('Close'),
+                ),
+                builder: (context) => Center(child: Text('Sheet $sheetNumber')),
+              );
+            }
+
+            return Scaffold(
+              body: Center(
+                child: FilledButton(
+                  key: const ValueKey('show-sheet'),
+                  onPressed: showSheet,
+                  child: const Text('Show'),
+                ),
+              ),
+            );
+          },
+        ),
+      ),
+    );
+
+    await tester.tap(find.byKey(const ValueKey('show-sheet')));
+    await tester.pump();
+    await tester.pumpAndSettle(
+      const Duration(milliseconds: 16),
+      EnginePhase.sendSemanticsUpdate,
+      const Duration(seconds: 3),
+    );
+
+    expect(find.text('Sheet 1'), findsOneWidget);
+
+    await tester.tap(find.byKey(const ValueKey('close-sheet')));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 16));
+    await tester.tap(find.byKey(const ValueKey('show-sheet')));
+    await tester.pump();
+
+    expect(showCount, 2);
+    expect(find.text('Sheet 2'), findsOneWidget);
+  });
 }
 
 class _Harness extends StatelessWidget {

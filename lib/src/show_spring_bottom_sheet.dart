@@ -149,6 +149,11 @@ class _SpringBottomSheetRoute<T> extends PageRoute<T> {
   bool get opaque => false;
 
   @override
+  Widget buildModalBarrier() {
+    return const IgnorePointer(child: SizedBox.expand());
+  }
+
+  @override
   Duration get transitionDuration => Duration.zero;
 
   @override
