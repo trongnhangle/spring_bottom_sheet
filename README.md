@@ -1,25 +1,51 @@
-<div align="center">
-  <h1>Spring Bottom Sheet</h1>
-  <p>A dependency-free Flutter bottom sheet with spring physics, content-based sizing, snap points, coordinated scrolling, and rubber-band gestures.</p>
+<div align="center" style="font-size: 70px; font-weight: bold;">
+    Spring Bottom Sheet 🌟
 </div>
 
+### Hey Awesome Developer! ☕️
+
+If `spring_bottom_sheet` saves you time, makes your UI feel smoother, or helps you ship faster, please consider supporting its development.
+
+I have never received any sponsorship or financial support for this work before. Even a small contribution — just $1 — would mean more than you can imagine. It helps me keep maintaining this package, improving the documentation, fixing issues, and building more useful Flutter tools for the community.
+
+```
+⭐️ "Open-source code grows stronger when kind developers support the people behind it." ⭐️
+```
+
 <p align="center">
-  <a href="https://pub.dev/packages/spring_bottom_sheet">
-    <img src="https://img.shields.io/pub/v/spring_bottom_sheet.svg" alt="pub package">
-  </a>
-  <a href="https://pub.dev/packages/spring_bottom_sheet/score">
-    <img src="https://img.shields.io/pub/likes/spring_bottom_sheet" alt="pub likes">
-  </a>
-  <a href="https://pub.dev/packages/spring_bottom_sheet/score">
-    <img src="https://img.shields.io/pub/popularity/spring_bottom_sheet" alt="pub popularity">
+  <a href="https://ko-fi.com/trongnhangle">
+    <img src="https://github.com/user-attachments/assets/2d8905a8-f089-4e87-a0fa-e40c09b16d30" alt="Support this project - even $1 helps" width="430">
   </a>
 </p>
 
-<p align="center">
-  <img width="368" height="720" alt="Spring Bottom Sheet demo" src="https://github.com/user-attachments/assets/917d6c8f-716b-4a02-b32a-d45722b03d68">
-</p>
+<div align="center">
+  <h2>Support this project and help me keep building:</h2>
+  <p style="font-size: 18px;">
+    🎯 Support me on <a href="https://ko-fi.com/trongnhangle" style="font-size: 22px; font-weight: bold;">Ko-fi</a><br>
+    💖 Send a small contribution via <a href="https://www.paypal.me/trongnhangle" style="font-size: 22px; font-weight: bold;">PayPal</a>
+  </p>
+</div>
 
-## Features
+*Every contribution, even $1, gives me more motivation to keep creating and improving open-source Flutter packages.* 🙏
+
+---
+
+# spring_bottom_sheet ✨
+
+A dependency-free Flutter bottom sheet with spring physics, snap points,
+dragging, rubber-band resistance, backdrop dismissal, coordinated scrolling, and
+optional staggered content animations.
+
+[![pub package](https://img.shields.io/pub/v/spring_bottom_sheet.svg)](https://pub.dev/packages/spring_bottom_sheet)
+[![likes](https://img.shields.io/pub/likes/spring_bottom_sheet)](https://pub.dev/packages/spring_bottom_sheet/score)
+[![popularity](https://img.shields.io/pub/popularity/spring_bottom_sheet)](https://pub.dev/packages/spring_bottom_sheet/score)
+
+<figure>
+  <img width="368" height="720" alt="Spring Bottom Sheet demo — smooth spring animation with snap points, drag handle, and backdrop dimming" src="https://github.com/user-attachments/assets/917d6c8f-716b-4a02-b32a-d45722b03d68" />
+</figure>
+
+
+## ✨ Features
 
 - Content-height sizing by default, similar to Flutter's standard bottom sheet.
 - Optional fractional snap points for compact, medium, and expanded states.
